@@ -100,7 +100,7 @@ export default function CTASection() {
             <a href="#" className="hover:text-[#00F0FF] transition-colors">API</a>
           </div>
           <div className="font-mono text-sm text-[#8B9DC3]">
-            © 2024 OctoOps. All rights reserved.
+            © 2026 OctoOps. All rights reserved.
           </div>
         </div>
       </div>

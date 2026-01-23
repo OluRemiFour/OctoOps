@@ -1,30 +1,54 @@
 'use client';
 
 import { create } from 'zustand';
+import { auth, projects, tasks as tasksApi, ai, risks as risksApi, team as teamApi } from './api';
 
 // Types
 export interface Task {
   id: string;
+  _id?: string;
   title: string;
-  status: 'todo' | 'in-progress' | 'done' | 'blocked';
+  status: 'todo' | 'in-progress' | 'in-review' | 'done' | 'blocked';
+  priority: 'low' | 'medium' | 'high' | 'critical';
   assignee: string;
+  assigneeName?: string;
+  assigneeEmail?: string;
   deadline: string;
   description?: string;
   subtasks?: Task[];
   dependencies?: string[];
+  milestone?: string;
 }
 
 export interface Risk {
   id: string;
+  _id?: string;
   title: string;
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  affectedTasks: string[];
-  predictedImpact: string;
-  recommendations: string[];
-  confidence: number;
+  affectedTasks?: string[];
+  predictedImpact?: string;
+  recommendations?: string[];
+  confidence?: number;
   detectedAt: Date;
+  detectedBy: 'ai' | 'manual';
   resolved: boolean;
+}
+
+export interface Project {
+  _id?: string;
+  id: string;
+  name: string;
+  description: string;
+  healthScore: number;
+  teamSize: number;
+  milestonesCompleted: number;
+  totalMilestones: number;
+  progress: number;
+  deadline?: string;
+  status?: string;
+  ownerId?: string;
+  team?: any[];
 }
 
 export interface TeamMember {
@@ -43,17 +67,6 @@ export interface Activity {
   timestamp: Date;
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  description: string;
-  healthScore: number;
-  teamSize: number;
-  milestonesCompleted: number;
-  totalMilestones: number;
-  progress: number;
-}
-
 export interface Notification {
   id: string;
   agent: string;
@@ -68,25 +81,31 @@ export interface Notification {
 // Store interface
 interface AppState {
   // Project
-  project: Project;
-  updateProject: (updates: Partial<Project>) => void;
+  project: Project | null;
+  fetchProject: () => Promise<void>;
+  updateProject: (updates: Partial<Project>) => void; // TODO: Connect to API
 
   // Tasks
   tasks: Task[];
-  addTask: (task: Omit<Task, 'id'>) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
+  fetchTasks: () => Promise<void>;
+  addTask: (task: Omit<Task, 'id'>, projectId?: string) => Promise<void>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => void;
+  submitForReview: (taskId: string) => Promise<void>;
+  approveTask: (taskId: string) => Promise<void>;
   selectedTasks: string[];
   setSelectedTasks: (ids: string[]) => void;
   toggleTaskSelection: (id: string) => void;
 
   // Risks
   risks: Risk[];
+  fetchRisks: () => Promise<void>;
   addRisk: (risk: Omit<Risk, 'id'>) => void;
   resolveRisk: (id: string) => void;
 
   // Team
   team: TeamMember[];
+  fetchTeam: () => Promise<void>;
   addTeamMember: (member: Omit<TeamMember, 'id'>) => void;
   removeTeamMember: (id: string) => void;
 
@@ -110,101 +129,85 @@ interface AppState {
   agentStates: Record<string, 'idle' | 'active' | 'thinking'>;
   setAgentState: (agent: string, state: 'idle' | 'active' | 'thinking') => void;
   activateAgent: (agent: string, duration?: number) => void;
+  isHydrated: boolean;
+  setHydrated: (val: boolean) => void;
+  onboardingData: { name: string; vision: string; extractedItems: any[]; recommendations?: any } | null;
+  setOnboardingData: (data: any) => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
 export const useAppStore = create<AppState>((set, get) => ({
-  // Initial Project
-  project: {
-    id: '1',
-    name: 'Product Launch Q1',
-    description: 'Launch new mobile app with AI-powered features, including smart notifications, personalized recommendations, and real-time collaboration tools.',
-    healthScore: 87,
-    teamSize: 12,
-    milestonesCompleted: 5,
-    totalMilestones: 8,
-    progress: 68,
+  // Project
+  project: null,
+  isHydrated: false,
+  setHydrated: (val: boolean) => set({ isHydrated: val }),
+  onboardingData: null,
+  setOnboardingData: (data) => set((state) => ({ 
+    onboardingData: { 
+      ...(state.onboardingData || { name: '', vision: '', extractedItems: [] }), 
+      ...data 
+    } 
+  })),
+  fetchProject: async (projectId?: string) => {
+    try {
+        const res = await projects.get(projectId);
+        if (res.data) {
+          set({ project: res.data });
+          // Auto-fetch related data if project exists
+          await Promise.all([
+            get().fetchTasks(),
+            get().fetchTeam(),
+            get().fetchRisks()
+          ]);
+        }
+    } catch (err) {
+        console.error("Failed to fetch project", err);
+    } finally {
+        set({ isHydrated: true });
+    }
   },
-  updateProject: (updates) => set((state) => ({ project: { ...state.project, ...updates } })),
+  updateProject: (updates) => set((state) => ({ project: state.project ? { ...state.project, ...updates } : null })),
 
   // Tasks
-  tasks: [
-    {
-      id: '1',
-      title: 'Beta Release Milestone',
-      status: 'in-progress',
-      assignee: 'Sarah Chen',
-      deadline: 'Mar 18',
-      description: 'Complete all tasks for beta release',
-      subtasks: [
-        {
-          id: '1-1',
-          title: 'Complete final UI polish',
-          status: 'in-progress',
-          assignee: 'Mike Johnson',
-          deadline: 'Mar 15',
-          subtasks: [
-            { id: '1-1-1', title: 'Fix navigation animations', status: 'done', assignee: 'Mike', deadline: 'Mar 12' },
-            { id: '1-1-2', title: 'Update color scheme', status: 'in-progress', assignee: 'Mike', deadline: 'Mar 14' },
-          ]
-        },
-        {
-          id: '1-2',
-          title: 'Run security audit',
-          status: 'todo',
-          assignee: 'David Lee',
-          deadline: 'Mar 16',
-        },
-        {
-          id: '1-3',
-          title: 'Prepare beta documentation',
-          status: 'done',
-          assignee: 'Emma Wilson',
-          deadline: 'Mar 10',
-        },
-      ]
-    },
-    {
-      id: '2',
-      title: 'Marketing Campaign',
-      status: 'in-progress',
-      assignee: 'Lisa Parker',
-      deadline: 'Mar 25',
-      subtasks: [
-        { id: '2-1', title: 'Create social media content', status: 'in-progress', assignee: 'Lisa', deadline: 'Mar 20' },
-        { id: '2-2', title: 'Design email templates', status: 'todo', assignee: 'John', deadline: 'Mar 22' },
-        { id: '2-3', title: 'Schedule promotional posts', status: 'blocked', assignee: 'Lisa', deadline: 'Mar 24' },
-      ]
-    },
-    {
-      id: '3',
-      title: 'Public Launch',
-      status: 'todo',
-      assignee: 'Sarah Chen',
-      deadline: 'Apr 1',
-      subtasks: [
-        { id: '3-1', title: 'Deploy to production', status: 'todo', assignee: 'DevOps', deadline: 'Apr 1' },
-        { id: '3-2', title: 'Monitor initial metrics', status: 'todo', assignee: 'Sarah', deadline: 'Apr 2' },
-      ]
-    },
-  ],
-  addTask: (task) => {
-    const newTask = { ...task, id: generateId() };
-    set((state) => ({ tasks: [...state.tasks, newTask] }));
-    get().addActivity({ agent: 'Planner', action: `Created new task: ${task.title}`, time: 'Just now' });
-    get().activateAgent('Planner');
+  tasks: [],
+  fetchTasks: async () => {
+    try {
+        const projectId = get().project?._id;
+        if (!projectId) return;
+        const res = await tasksApi.getAll(projectId);
+        set({ tasks: res.data });
+    } catch (err) {
+        console.error("Failed to fetch tasks", err);
+    }
   },
-  updateTask: (id, updates) => {
-    set((state) => ({
-      tasks: state.tasks.map((t) => t.id === id ? { ...t, ...updates } : t)
-    }));
-    get().addActivity({ agent: 'Execution', action: `Updated task ${id}`, time: 'Just now' });
-    get().activateAgent('Execution');
+  addTask: async (task, projectId) => {
+    try {
+        const res = await tasksApi.create({ ...task, projectId });
+        set((state) => ({ tasks: [res.data, ...state.tasks] }));
+        
+        get().addActivity({ agent: 'Planner', action: `Created new task: ${task.title}`, time: 'Just now' });
+        get().activateAgent('Planner');
+    } catch (err) {
+        console.error("Failed to create task", err);
+    }
+  },
+  updateTask: async (id, updates) => {
+    try {
+        const res = await tasksApi.update(id, updates);
+        set((state) => ({
+            tasks: state.tasks.map((t) => t.id === id ? res.data : t)
+        }));
+        get().addActivity({ agent: 'Execution', action: `Updated task ${id}`, time: 'Just now' });
+        get().activateAgent('Execution');
+    } catch (err) {
+        console.error("Failed to update task", err);
+    }
   },
   deleteTask: (id) => {
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
   },
+  
   selectedTasks: [],
   setSelectedTasks: (ids) => set({ selectedTasks: ids }),
   toggleTaskSelection: (id) => set((state) => ({
@@ -213,47 +216,63 @@ export const useAppStore = create<AppState>((set, get) => ({
       : [...state.selectedTasks, id]
   })),
 
+  submitForReview: async (taskId) => {
+    try {
+        // Optimistic update
+        set((state) => ({
+          tasks: state.tasks.map((t) => t.id === taskId ? { ...t, status: 'in-review' } : t)
+        }));
+        
+        await tasksApi.submit(taskId);
+        
+        get().addActivity({ agent: 'Execution', action: `Task submitted for review: ${get().tasks.find(t => t.id === taskId)?.title}`, time: 'Just now' });
+        get().activateAgent('Execution');
+
+        get().addNotification({
+            agent: 'Execution',
+            title: 'Submitted for Review',
+            message: `Task is now pending QA.`,
+            type: 'info',
+            read: false
+        });
+    } catch (err) {
+        console.error("Failed to submit task", err);
+    }
+  },
+
+  approveTask: async (taskId) => {
+     try {
+        await tasksApi.approve(taskId);
+        set((state) => ({
+          tasks: state.tasks.map((t) => t.id === taskId ? { ...t, status: 'done' } : t)
+        }));
+        get().addActivity({ agent: 'Execution', action: `Task approved and completed`, time: 'Just now' });
+        get().activateAgent('Execution');
+     } catch (err) {
+        console.error("Failed to approve task", err);
+     }
+  },
+
   // Risks
-  risks: [
-    {
-      id: '1',
-      title: 'Potential Deadline Conflict',
-      description: 'Beta Release milestone has 3 tasks still pending with deadline in 5 days',
-      severity: 'high',
-      affectedTasks: ['1-1-2', '1-2'],
-      predictedImpact: 'May delay beta release by 2-3 days',
-      recommendations: ['Parallelize UI polish and security audit', 'Request additional resources', 'Reduce scope of color scheme update'],
-      confidence: 85,
-      detectedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      resolved: false,
-    },
-    {
-      id: '2',
-      title: 'Resource Bottleneck',
-      description: 'Mike Johnson is assigned to 3 concurrent high-priority tasks',
-      severity: 'medium',
-      affectedTasks: ['1-1-1', '1-1-2'],
-      predictedImpact: 'Potential burnout and quality issues',
-      recommendations: ['Redistribute tasks to other team members', 'Prioritize tasks by deadline'],
-      confidence: 72,
-      detectedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      resolved: false,
-    },
-    {
-      id: '3',
-      title: 'Blocked Task Cascade',
-      description: 'Promotional posts task blocked, may affect marketing campaign timeline',
-      severity: 'medium',
-      affectedTasks: ['2-3'],
-      predictedImpact: 'Marketing launch could slip by 1 week',
-      recommendations: ['Investigate blocker reason', 'Prepare alternative launch strategy'],
-      confidence: 68,
-      detectedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-      resolved: false,
-    },
-  ],
+  risks: [],
+  fetchRisks: async () => {
+    try {
+        const projectId = get().project?._id;
+        if (!projectId) return;
+        const res = await risksApi.getAll(projectId);
+        set({ risks: res.data });
+    } catch (err) {
+        console.error("Failed to fetch risks", err);
+    }
+  },
   addRisk: (risk) => {
-    const newRisk = { ...risk, id: generateId() };
+    const newRisk: Risk = { 
+      ...risk, 
+      id: generateId(), 
+      detectedAt: new Date(), 
+      resolved: false,
+      detectedBy: risk.detectedBy || 'manual'
+    };
     set((state) => ({ risks: [...state.risks, newRisk] }));
     get().addNotification({
       agent: 'Risk',
@@ -272,19 +291,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Team
-  team: [
-    { id: '1', name: 'Sarah Chen', email: 'sarah@octoops.dev', role: 'Project Lead', avatar: '👩‍💼' },
-    { id: '2', name: 'Mike Johnson', email: 'mike@octoops.dev', role: 'Senior Developer', avatar: '👨‍💻' },
-    { id: '3', name: 'Emma Wilson', email: 'emma@octoops.dev', role: 'Technical Writer', avatar: '👩‍🎨' },
-    { id: '4', name: 'David Lee', email: 'david@octoops.dev', role: 'Security Engineer', avatar: '🧑‍🔧' },
-    { id: '5', name: 'Lisa Parker', email: 'lisa@octoops.dev', role: 'Marketing Manager', avatar: '👩‍💻' },
-    { id: '6', name: 'John Smith', email: 'john@octoops.dev', role: 'Designer', avatar: '👨‍🎨' },
-  ],
-  addTeamMember: (member) => {
-    const newMember = { ...member, id: generateId() };
-    set((state) => ({ team: [...state.team, newMember] }));
-    get().addActivity({ agent: 'Communication', action: `Added team member: ${member.name}`, time: 'Just now' });
-    get().activateAgent('Communication');
+  team: [],
+  fetchTeam: async () => {
+    try {
+        const projectId = get().project?._id;
+        if (!projectId) return;
+        const res = await teamApi.getMembers(projectId);
+        set({ team: res.data.members || [] });
+    } catch (err) {
+        console.error("Failed to fetch team", err);
+    }
+  },
+  addTeamMember: async (member) => {
+    try {
+        const projectId = get().project?._id;
+        if (!projectId) return;
+        await teamApi.invite({ ...member, projectId });
+        get().addActivity({ agent: 'Communication', action: `Sent invitation to ${member.name}`, time: 'Just now' });
+        get().activateAgent('Communication');
+        await get().fetchTeam();
+    } catch (err) {
+        console.error("Failed to invite member", err);
+    }
   },
   removeTeamMember: (id) => {
     const member = get().team.find((m) => m.id === id);

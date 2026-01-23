@@ -18,7 +18,7 @@ const agentConfig: Agent[] = [
 ];
 
 export default function OctopusVisualization() {
-  const { agentStates, activateAgent, openModal } = useAppStore();
+  const { agentStates, activateAgent, openModal, risks } = useAppStore();
 
   const handleAgentClick = (agentName: string) => {
     activateAgent(agentName, 2000);
@@ -37,8 +37,11 @@ export default function OctopusVisualization() {
     }
   };
 
+  const hasHighRisk = risks.some(r => r.severity === 'high' || r.severity === 'critical');
+  const isConverging = agentStates['Recommendation'] === 'active';
+
   return (
-    <div className="relative w-full max-w-3xl mx-auto aspect-[16/10]">
+    <div className="relative w-full max-w-3xl mx-auto aspect-[16/12]">
       <svg
         viewBox="0 0 800 500"
         className="w-full h-full"
@@ -56,18 +59,26 @@ export default function OctopusVisualization() {
           
           {/* Gradient for Brain */}
           <radialGradient id="brain-gradient">
-            <stop offset="0%" stopColor="#00F0FF" stopOpacity="0.4" />
-            <stop offset="50%" stopColor="#9D4EDD" stopOpacity="0.2" />
+            <stop offset="0%" stopColor={hasHighRisk ? "#FF3366" : "#00F0FF"} stopOpacity="0.4" />
+            <stop offset="50%" stopColor={hasHighRisk ? "#FF0000" : "#9D4EDD"} stopOpacity="0.2" />
             <stop offset="100%" stopColor="#0A0E27" stopOpacity="0.1" />
           </radialGradient>
 
           {/* Particle animations */}
-          {agents.map((agent, index) => (
+          {agentConfig.map((agent, index) => (
             <g key={`particle-def-${index}`}>
               <circle id={`particle-${index}`} r="3" fill={agent.color} opacity="0.8" />
             </g>
           ))}
         </defs>
+
+        {/* Risk Ripple Animation */}
+        {hasHighRisk && (
+          <g>
+            <circle cx="400" cy="250" r="100" fill="none" stroke="#FF3366" strokeWidth="2" opacity="0.5" className="animate-ping" style={{ animationDuration: '3s' }} />
+            <circle cx="400" cy="250" r="150" fill="none" stroke="#FF3366" strokeWidth="1" opacity="0.3" className="animate-ping" style={{ animationDuration: '3s', animationDelay: '1s' }} />
+          </g>
+        )}
 
         {/* Tentacles */}
         {agentConfig.map((agent, index) => {
@@ -75,16 +86,23 @@ export default function OctopusVisualization() {
           const baseY = 250;
           const angle = (agent.angle * Math.PI) / 180;
           const length = 180;
-          const endX = baseX + Math.cos(angle) * length;
-          const endY = baseY + Math.sin(angle) * length;
           
-          const controlX = baseX + Math.cos(angle) * (length * 0.6);
-          const controlY = baseY + Math.sin(angle) * (length * 0.6) + 30;
+          // Convergence Logic: Pull agents inward if converging
+          const currentLength = isConverging ? 80 : 180; 
+          
+          const endX = baseX + Math.cos(angle) * currentLength;
+          const endY = baseY + Math.sin(angle) * currentLength;
+          
+          const controlX = baseX + Math.cos(angle) * (currentLength * 0.6);
+          const controlY = baseY + Math.sin(angle) * (currentLength * 0.6) + (isConverging ? 0 : 30);
 
           const isActive = agentStates[agent.name] === 'active';
 
           return (
-            <g key={index} className="cursor-pointer" onClick={() => handleAgentClick(agent.name)}>
+            <g key={index} 
+               className="cursor-pointer transition-all duration-1000 ease-in-out" // Smooth transition for convergence
+               onClick={() => handleAgentClick(agent.name)}>
+              
               {/* Tentacle Glow Layer */}
               {isActive && (
                 <path
@@ -95,6 +113,7 @@ export default function OctopusVisualization() {
                   strokeLinecap="round"
                   opacity="0.3"
                   filter="url(#glow-effect)"
+                  className="transition-all duration-1000 ease-in-out"
                 />
               )}
               
@@ -106,32 +125,9 @@ export default function OctopusVisualization() {
                 fill="none"
                 strokeLinecap="round"
                 opacity={isActive ? 1 : 0.5}
-                className="transition-all duration-500 hover:opacity-100"
+                className="transition-all duration-1000 ease-in-out hover:opacity-100"
                 strokeDasharray={isActive ? "none" : "10,5"}
               />
-              
-              {/* Data Particles flowing along tentacle when active */}
-              {isActive && (
-                <>
-                  <circle
-                    cx={baseX + Math.cos(angle) * length * 0.3}
-                    cy={baseY + Math.sin(angle) * length * 0.3}
-                    r="4"
-                    fill={agent.color}
-                    opacity="0.8"
-                    className="animate-pulse"
-                  />
-                  <circle
-                    cx={baseX + Math.cos(angle) * length * 0.7}
-                    cy={baseY + Math.sin(angle) * length * 0.7}
-                    r="3"
-                    fill={agent.color}
-                    opacity="0.6"
-                    className="animate-pulse"
-                    style={{ animationDelay: '300ms' }}
-                  />
-                </>
-              )}
               
               {/* End Node */}
               <circle
@@ -141,7 +137,7 @@ export default function OctopusVisualization() {
                 fill={agent.color}
                 opacity={isActive ? 1 : 0.6}
                 filter={isActive ? 'url(#glow-effect)' : undefined}
-                className="transition-all duration-500"
+                className="transition-all duration-1000 ease-in-out"
               />
               
               {/* Inner Node Pulse */}
@@ -168,7 +164,7 @@ export default function OctopusVisualization() {
                 fontWeight="bold"
                 textAnchor="middle"
                 opacity={isActive ? 1 : 0.7}
-                className="transition-opacity duration-500"
+                className="transition-all duration-1000 ease-in-out"
               >
                 {agent.name}
               </text>
@@ -182,6 +178,7 @@ export default function OctopusVisualization() {
                 fontFamily="JetBrains Mono"
                 textAnchor="middle"
                 opacity="0.7"
+                className="transition-all duration-1000 ease-in-out"
               >
                 {isActive ? 'ACTIVE' : 'IDLE'}
               </text>
@@ -198,7 +195,7 @@ export default function OctopusVisualization() {
             r="90"
             fill="url(#brain-gradient)"
             filter="url(#glow-effect)"
-            className="animate-pulse"
+            className={`animate-pulse ${hasHighRisk ? 'animate-pulse-fast' : ''}`}
           />
           
           {/* Main Brain Circle */}
@@ -206,8 +203,8 @@ export default function OctopusVisualization() {
             cx="400"
             cy="250"
             r="70"
-            fill="rgba(0, 240, 255, 0.1)"
-            stroke="#00F0FF"
+            fill={hasHighRisk ? "rgba(255, 51, 102, 0.1)" : "rgba(0, 240, 255, 0.1)"}
+            stroke={hasHighRisk ? "#FF3366" : "#00F0FF"}
             strokeWidth="3"
             opacity="0.6"
           />
@@ -253,9 +250,12 @@ export default function OctopusVisualization() {
           return agentConfig.slice(i + 1).map((otherAgent, j) => {
             if (agentStates[otherAgent.name] !== 'active') return null;
             
+            // Re-calculate positions for lines to match convergent state
+            const currentLength = isConverging ? 80 : 180;
+            
             const angle1 = (agent.angle * Math.PI) / 180;
             const angle2 = (otherAgent.angle * Math.PI) / 180;
-            const x1 = 400 + Math.cos(angle1) * 70;
+            const x1 = 400 + Math.cos(angle1) * 70; // Start from brain edge (approx)
             const y1 = 250 + Math.sin(angle1) * 70;
             const x2 = 400 + Math.cos(angle2) * 70;
             const y2 = 250 + Math.sin(angle2) * 70;

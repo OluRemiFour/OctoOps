@@ -21,6 +21,23 @@ export default function ViewReportsModal() {
   const [selectedReport, setSelectedReport] = useState<ReportType>('overview');
 
   const isOpen = activeModal === 'view-reports';
+  
+  if (!isOpen) return null;
+  if (!project) {
+    return (
+      <Dialog open={isOpen} onOpenChange={closeModal}>
+        <DialogContent className="glass border-[#00F0FF]/30 bg-[#0A0E27]/95">
+          <DialogHeader>
+            <DialogTitle className="text-[#E8F0FF]">No Project Selected</DialogTitle>
+            <DialogDescription className="text-[#8B9DC3]">Please select or create a project to view reports.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end pt-4">
+            <Button onClick={closeModal} className="bg-[#00F0FF] text-[#0A0E27]">Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const completedTasks = tasks.reduce((acc, task) => {
     const countDone = (t: typeof tasks[0]): number => {

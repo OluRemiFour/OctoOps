@@ -23,7 +23,7 @@ export default function AnimatedOctopus() {
   ];
 
   return (
-    <div className="relative w-full max-w-md aspect-square">
+    <div className="relative w-full max-w-1xl aspect-square">
       <svg
         viewBox="0 0 400 400"
         className="w-full h-full"

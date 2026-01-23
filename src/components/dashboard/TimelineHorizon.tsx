@@ -3,6 +3,7 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 
 interface Milestone {
   id: string;
@@ -24,6 +25,8 @@ const milestones: Milestone[] = [
 ];
 
 export default function TimelineHorizon() {
+  const { openModal } = useAppStore();
+
   return (
     <div className="glass rounded-3xl p-8">
       <div className="flex items-center justify-between mb-6">
@@ -46,7 +49,11 @@ export default function TimelineHorizon() {
               const isLast = index === milestones.length - 1;
               
               return (
-                <div key={milestone.id} className="flex flex-col items-center min-w-[140px]">
+                <div 
+                  key={milestone.id} 
+                  className="flex flex-col items-center min-w-[140px] cursor-pointer group"
+                  onClick={() => openModal('timeline-detail', milestone)}
+                >
                   {/* Node */}
                   <div className="relative z-10 mb-4">
                     <div

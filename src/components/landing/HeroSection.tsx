@@ -6,13 +6,17 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, X } from 'lucide-react';
 import AnimatedOctopus from './AnimatedOctopus';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useAppStore } from '@/lib/store';
 
 export default function HeroSection() {
   const router = useRouter();
   const [showDemo, setShowDemo] = useState(false);
 
+  const { setOnboardingData } = useAppStore();
+
   const handleStartProject = () => {
-    router.push('/dashboard');
+    setOnboardingData({ name: '', vision: '' }); // Initialize
+    router.push('/login?mode=admin');
   };
 
   return (
@@ -70,7 +74,7 @@ export default function HeroSection() {
             </div>
             
             <h1 className="font-display font-bold text-6xl lg:text-7xl leading-tight">
-              Meet{' '}
+              Intel{' '}
               <span className="bg-gradient-to-r from-[#00F0FF] via-[#00FF88] to-[#9D4EDD] bg-clip-text text-transparent">
                 OctoOps
               </span>
@@ -83,24 +87,23 @@ export default function HeroSection() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button 
-                size="lg" 
-                onClick={handleStartProject}
-                className="bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0A0E27] font-display font-bold text-lg px-8 py-6 rounded-2xl glow-cyan transition-all duration-200 hover:scale-105"
+              <a 
+                href="/login?mode=admin"
+                className="inline-flex items-center justify-center bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0A0E27] font-display font-bold text-lg px-8 py-6 rounded-2xl glow-cyan transition-all duration-200 hover:scale-105"
               >
-                Start Free Project
+                Start Project
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              </a>
               
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => setShowDemo(true)}
-                className="glass border-[#00F0FF]/30 hover:border-[#00F0FF]/60 text-[#E8F0FF] font-display font-bold text-lg px-8 py-6 rounded-2xl transition-all duration-200 hover:scale-105"
+              <a 
+                href="/login?mode=member"
+                className="inline-flex items-center justify-center glass border-[#00F0FF]/30 hover:border-[#00F0FF]/60 text-[#E8F0FF] font-display font-bold text-lg px-8 py-6 rounded-2xl transition-all duration-200 hover:scale-105"
               >
-                <Play className="mr-2 h-5 w-5" />
-                Watch Demo
-              </Button>
+                <div className="flex items-center">
+                    <span className="w-2 h-2 rounded-full bg-[#00FF88] mr-3 animate-pulse"></span>
+                    Member Login
+                </div>
+              </a>
             </div>
 
             {/* Quick Stats */}

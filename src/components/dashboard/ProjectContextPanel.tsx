@@ -1,11 +1,41 @@
 'use client';
 
 import React from 'react';
-import { Users, Target, TrendingUp, Edit2 } from 'lucide-react';
+import { Users, Target, TrendingUp, Edit2, Rocket, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { Button } from '@/components/ui/button';
 
 export default function ProjectContextPanel() {
-  const { project, team } = useAppStore();
+  const { project, team, openModal } = useAppStore();
+  if (!project) {
+    return (
+      <div className="glass rounded-3xl p-12 text-center border-2 border-dashed border-[#00F0FF]/20">
+        <Sparkles className="w-12 h-12 text-[#9D4EDD] mx-auto mb-4 animate-pulse" />
+        <h2 className="font-display text-2xl font-bold text-[#E8F0FF] mb-2">No Active Mission</h2>
+        <p className="font-mono text-sm text-[#8B9DC3] mb-8 max-w-md mx-auto">
+          Start by defining your project vision or uploading a mockup. 
+          OctoOps AI will help you assemble the team and roadmap.
+        </p>
+        <div className="flex justify-center gap-4">
+          <Button
+            onClick={() => openModal('project-vision')}
+            className="bg-[#9D4EDD] hover:bg-[#9D4EDD]/90 text-white font-bold h-12 px-8 rounded-xl glow-purple"
+          >
+            <Sparkles className="w-5 h-5 mr-2" />
+            Define Project Vision
+          </Button>
+          <Button
+            onClick={() => openModal('image-upload')}
+            className="glass border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10 font-bold h-12 px-8 rounded-xl"
+          >
+            <ImageIcon className="w-5 h-5 mr-2" />
+            Upload Mockup
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const healthScore = project.healthScore;
 
   return (
@@ -19,12 +49,36 @@ export default function ProjectContextPanel() {
                 {project.name}
               </h2>
               <span className="px-3 py-1 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/30 font-mono text-xs text-[#00FF88]">
-                ACTIVE
+                {project.status?.toUpperCase() || 'ACTIVE'}
               </span>
             </div>
             <p className="font-mono text-sm text-[#8B9DC3] leading-relaxed">
               {project.description}
             </p>
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              onClick={() => openModal('project-vision')}
+              className="bg-[#9D4EDD]/20 border border-[#9D4EDD]/40 text-[#9D4EDD] hover:bg-[#9D4EDD]/30 font-bold"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Define Vision
+            </Button>
+            <Button
+              onClick={() => openModal('image-upload')}
+              className="bg-[#00F0FF]/20 border border-[#00F0FF]/40 text-[#00F0FF] hover:bg-[#00F0FF]/30 font-bold"
+            >
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Analyze Roadmap
+            </Button>
+            <Button
+              onClick={() => openModal('project-vision')}
+              className="bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold glow-green ml-auto"
+            >
+              <Rocket className="w-4 h-4 mr-2" />
+              Launch OctoOps
+            </Button>
           </div>
 
           <div className="grid grid-cols-3 gap-6">
@@ -74,7 +128,6 @@ export default function ProjectContextPanel() {
                 </linearGradient>
               </defs>
               
-              {/* Background Circle */}
               <circle
                 cx="80"
                 cy="80"
@@ -84,7 +137,6 @@ export default function ProjectContextPanel() {
                 fill="none"
               />
               
-              {/* Progress Circle */}
               <circle
                 cx="80"
                 cy="80"
@@ -101,7 +153,6 @@ export default function ProjectContextPanel() {
               />
             </svg>
             
-            {/* Center Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <div className="font-display text-4xl font-bold text-[#00FF88]">
                 {healthScore}

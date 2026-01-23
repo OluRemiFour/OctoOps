@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAppStore } from '@/lib/store';
-import { Image, Upload, Scan, CheckCircle, Plus, X } from 'lucide-react';
+import { Image, Upload, Scan, CheckCircle, Plus, X, Edit3, Loader2 } from 'lucide-react';
+import { ai } from '@/lib/api';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ExtractedItem {
   id: string;
@@ -16,13 +18,17 @@ interface ExtractedItem {
 }
 
 export default function ImageUploadModal() {
-  const { activeModal, closeModal, addTask, activateAgent, addActivity, addNotification } = useAppStore();
+  const { activeModal, openModal, closeModal, project, addTask, activateAgent, addActivity, addNotification, setOnboardingData } = useAppStore();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
+  const [extractedText, setExtractedText] = useState('');
   const [isMerging, setIsMerging] = useState(false);
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [scanResults, setScanResults] = useState<any>(null);
 
   const isOpen = activeModal === 'image-upload';
 
@@ -54,32 +60,72 @@ export default function ImageUploadModal() {
     if (!file) return;
 
     setIsScanning(true);
-    setScanProgress(0);
-    activateAgent('Planner', 3000);
+    setScanProgress(30);
+    activateAgent('Planner', 5000);
 
-    // Simulate scanning progress
-    for (let i = 0; i <= 100; i += 10) {
-      setScanProgress(i);
-      await new Promise((resolve) => setTimeout(resolve, 200));
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      if (project?._id) {
+        formData.append('projectId', project._id);
+      }
+
+      const res = await ai.analyzeImage(formData);
+      
+      setScanProgress(70);
+      
+      if (res.data) {
+        setExtractedText(res.data.extractedText || '');
+        
+        // Convert recommendation items to our internal format
+        const items: ExtractedItem[] = [
+          ...(res.data.recommendations?.tasks?.map((t: any, i: number) => ({
+            id: `task-${i}`,
+            type: 'task',
+            title: t.title,
+            details: t.description,
+            selected: true
+          })) || []),
+          ...(res.data.recommendations?.milestones?.map((m: any, i: number) => ({
+            id: `milestone-${i}`,
+            type: 'milestone',
+            title: m.name,
+            details: `Est. ${m.estimatedWeeks} weeks`,
+            selected: true
+          })) || []),
+          {
+            id: 'deadline',
+            type: 'deadline',
+            title: 'Recommended Deadline',
+            details: res.data.recommendations?.recommendedDeadline || 'TBD',
+            selected: true
+          }
+        ];
+        
+        setExtractedItems(items);
+        setScanResults(res.data.recommendations);
+        setScanProgress(100);
+      }
+    } catch (error) {
+      console.error('AI Scan failed:', error);
+      alert('AI scan failed. Please try again.');
+    } finally {
+      setIsScanning(false);
     }
 
-    // Simulate extracted items (in real app, this would come from AI)
-    const mockExtracted: ExtractedItem[] = [
-      { id: '1', type: 'milestone', title: 'Phase 1 Completion', details: 'End of week 2', selected: true },
-      { id: '2', type: 'task', title: 'User Research', details: 'Assigned to UX team', selected: true },
-      { id: '3', type: 'task', title: 'Wireframe Design', details: '5 days estimated', selected: true },
-      { id: '4', type: 'deadline', title: 'Stakeholder Review', details: 'March 20th', selected: true },
-      { id: '5', type: 'task', title: 'Prototype Development', details: 'Depends on wireframes', selected: false },
-    ];
-
-    setExtractedItems(mockExtracted);
-    setIsScanning(false);
-
-    addActivity({
-      agent: 'Planner',
-      action: `Scanned image and extracted ${mockExtracted.length} items`,
-      time: 'Just now',
-    });
+    if (project) {
+      addActivity({
+        agent: 'Planner',
+        action: `Scanned image and extracted details for ${project.name}`,
+        time: 'Just now',
+      });
+    } else {
+      addActivity({
+        agent: 'Planner',
+        action: `Scanned mission mockup for analysis`,
+        time: 'Just now',
+      });
+    }
   };
 
   const toggleItem = (id: string) => {
@@ -102,13 +148,17 @@ export default function ImageUploadModal() {
     selectedItems
       .filter((item) => item.type === 'task')
       .forEach((item) => {
-        addTask({
-          title: item.title,
-          status: 'todo',
-          assignee: 'Unassigned',
-          deadline: 'TBD',
-          description: item.details,
-        });
+        const projectId = project?._id || project?.id;
+        if (projectId) {
+          addTask({
+            title: item.title,
+            status: 'todo',
+            priority: 'medium',
+            assignee: 'Unassigned',
+            deadline: 'TBD',
+            description: item.details,
+          }, projectId);
+        }
       });
 
     addNotification({
@@ -119,9 +169,20 @@ export default function ImageUploadModal() {
       read: false,
     });
 
+    // Save to onboarding data - pass both text and recommendations
+    setOnboardingData({ 
+      vision: extractedText,
+      recommendations: scanResults 
+    });
+
     setIsMerging(false);
     resetModal();
     closeModal();
+    
+    // Slight delay before opening the next modal to avoid UI race conditions
+    setTimeout(() => {
+      openModal('project-vision');
+    }, 150);
   };
 
   const resetModal = () => {
@@ -130,7 +191,9 @@ export default function ImageUploadModal() {
     setIsScanning(false);
     setScanProgress(0);
     setExtractedItems([]);
+    setExtractedText('');
     setIsMerging(false);
+    setIsEditingText(false);
   };
 
   const typeConfig = {
@@ -160,7 +223,8 @@ export default function ImageUploadModal() {
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
-              className="glass rounded-2xl p-12 border-2 border-dashed border-[#FFB800]/30 hover:border-[#FFB800]/60 transition-colors text-center cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              className="glass rounded-2xl p-12 border-2 border-dashed border-[#FFB800]/30 hover:border-[#FFB800]/60 transition-colors text-center cursor-pointer group"
             >
               <input
                 type="file"
@@ -168,8 +232,9 @@ export default function ImageUploadModal() {
                 onChange={handleFileSelect}
                 className="hidden"
                 id="image-upload"
+                ref={fileInputRef}
               />
-              <label htmlFor="image-upload" className="cursor-pointer">
+              <label htmlFor="image-upload" className="cursor-pointer pointer-events-none">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-[#FFB800]/20 border-2 border-[#FFB800]/40 flex items-center justify-center">
                     <Upload className="w-10 h-10 text-[#FFB800]" />
@@ -248,6 +313,35 @@ export default function ImageUploadModal() {
                     <Scan className="w-4 h-4 mr-2" />
                     Start AI Scan
                   </Button>
+                )}
+
+                {/* Extracted Text Review Area */}
+                {!isScanning && extractedText && (
+                  <div className="space-y-3 pt-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-[#FFB800] uppercase tracking-widest">Extracted Text</h4>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setIsEditingText(!isEditingText)}
+                        className="h-6 text-[10px] text-[#8B9DC3]"
+                      >
+                        <Edit3 className="w-3 h-3 mr-1" />
+                        {isEditingText ? 'Save' : 'Edit'}
+                      </Button>
+                    </div>
+                    {isEditingText ? (
+                      <Textarea 
+                        value={extractedText}
+                        onChange={(e) => setExtractedText(e.target.value)}
+                        className="glass border-white/10 text-xs min-h-[150px] text-[#E8F0FF]"
+                      />
+                    ) : (
+                      <div className="glass p-3 rounded-xl border-white/5 bg-white/5 text-[11px] text-[#8B9DC3] leading-relaxed max-h-[150px] overflow-y-auto italic">
+                        "{extractedText}"
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
