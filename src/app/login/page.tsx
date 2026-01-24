@@ -57,7 +57,7 @@ function LoginContent() {
 
       <div className="w-full max-w-md p-8 glass rounded-3xl relative z-10 mx-4 border border-white/5">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 rounded-2xl bg-[#00F0FF]/10 border border-[#00F0FF]/20 flex items-center justify-center mx-auto mb-6 glow-cyan shadow-[0_0_30px_rgba(0,240,255,0.2)]">
+          <div className="w-20 h-20 rounded-2xl bg-[#00F0FF]/10 border border-[#00F0FF]/20 flex items-center justify-center mx-auto mb-3 glow-cyan shadow-[0_0_30px_rgba(0,240,255,0.2)]">
             <span className="text-5xl">🐙</span>
           </div>
           <h1 className="font-display text-4xl font-bold text-[#E8F0FF] mb-2 tracking-tight">
@@ -73,7 +73,7 @@ function LoginContent() {
         <div className="space-y-6">
           {isSignup ? (
             /* ADMIN SIGNUP FORM */
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <div className="space-y-2 animate-in fade-in slide-in-from-right-4">
                 <div className="space-y-2">
                   <label className="font-mono text-xs text-[#00F0FF] uppercase tracking-wider ml-1">Full Name</label>
                   <div className="relative">
@@ -114,7 +114,7 @@ function LoginContent() {
                  <ArrowRight className="w-5 h-5 ml-2" />
                </Button>
                
-               <div className="text-center pt-2">
+               <div className="text-center">
                  <a href="/login?mode=member" className="text-xs text-[#8B9DC3] hover:text-[#E8F0FF] hover:underline">
                     Join an existing team instead
                  </a>
@@ -122,7 +122,7 @@ function LoginContent() {
             </div>
           ) : (
             /* MEMBER LOGIN FORM */
-            <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
+            <div className="animate-in fade-in slide-in-from-left-4">
                <div className="space-y-2">
                  <label className="font-mono text-xs text-[#00FF88] uppercase tracking-wider ml-1">Invite Code / Link / Email Address</label>
                  <div className="relative">
@@ -162,7 +162,7 @@ function LoginContent() {
              </a>
         </div>
 
-        <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <div className="mt-4 text-center border-t border-white/5 pt-3">
              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
                 <Sparkles className="w-3 h-3 text-[#FF3366]" />
                 <span className="font-mono text-[10px] text-[#8B9DC3] uppercase tracking-wider">
