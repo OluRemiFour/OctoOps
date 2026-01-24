@@ -7,25 +7,79 @@ import { useAppStore } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Sparkles, Upload, Calendar, Users, ArrowRight, ShieldCheck, Plus, Trash2 } from 'lucide-react';
+import { Sparkles, Upload, Calendar, Users, ArrowRight, ShieldCheck, Plus, Trash2, Loader2 } from 'lucide-react';
 
 export default function OnboardingWizard() {
   const router = useRouter();
-  const { login } = useAuth();
-  const { updateProject, addTeamMember } = useAppStore();
+  const { login, user: authContextUser } = useAuth();
+  const { updateProject, addTeamMember, openModal, onboardingData, setOnboardingData, activateAgent } = useAppStore();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     projectName: '',
     description: '',
+    ownerEmail: '',
     deadline: '',
-    milestones: ['MVP Release', 'Beta Testing', 'Public Launch'],
+    milestones: [] as string[],
   });
 
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  // Sync with onboarding data from store
+  React.useEffect(() => {
+    if (onboardingData) {
+      setFormData(prev => ({
+        ...prev,
+        projectName: onboardingData.name || prev.projectName,
+        description: onboardingData.vision || prev.description,
+        deadline: onboardingData.recommendations?.recommendedDeadline || prev.deadline,
+        milestones: onboardingData.recommendations?.keyMilestones?.map((m: any) => m.name) || prev.milestones
+      }));
+
+      if (onboardingData.recommendations?.teamRecommendations?.roles) {
+        setInvites(onboardingData.recommendations.teamRecommendations.roles.map((r: any) => ({
+          email: '',
+          role: r.role.toLowerCase().includes('qa') ? 'qa' : 'member',
+          suggestedRole: r.role
+        })));
+      }
+    }
+  }, [onboardingData]);
+
   const [invites, setInvites] = useState<{ email: string; role: string }[]>([
-    { email: '', role: 'qa' } // Enforce at least one QA slot initially
+    { email: '', role: 'qa' }
   ]);
 
-  const handleNext = () => setStep(step + 1);
+  const handleNext = async () => {
+    if (step === 1) {
+        // If we have data but no AI recommendations yet, trigger it
+        if (formData.projectName && formData.description && !onboardingData?.recommendations) {
+            setIsAnalyzing(true);
+            activateAgent('Planner', 3000);
+            try {
+                const { ai } = await import('@/lib/api');
+                const res = await ai.getTeamAssembly(formData.projectName, formData.description);
+                if (res.data?.error) {
+                    throw new Error(res.data.error);
+                }
+                setOnboardingData({ 
+                    name: formData.projectName,
+                    vision: formData.description,
+                    recommendations: res.data 
+                });
+                setStep(step + 1);
+            } catch (e: any) {
+                console.error('AI Onboarding Error:', e);
+                alert(`AI Analysis Required: ${e.message || 'The system could not analyze your project pulse. Please try again.'}`);
+                // DO NOT increment step
+            } finally {
+                setIsAnalyzing(false);
+            }
+            return; // Exit early as we handle step increment in try block
+        }
+    }
+    setStep(step + 1);
+  };
   const handleBack = () => setStep(step - 1);
 
   const addInvite = () => setInvites([...invites, { email: '', role: 'member' }]);
@@ -36,29 +90,30 @@ export default function OnboardingWizard() {
     setInvites(newInvites);
   };
 
-  const handleComplete = () => {
-    // 1. Update Project Data
-    updateProject({
-        name: formData.projectName || 'New Project',
-        description: formData.description || 'No description provided.',
-        totalMilestones: formData.milestones.length
-    });
-
-    // 2. Add Invitees to Team (Mock)
-    invites.forEach(invite => {
-        if (invite.email) {
-            addTeamMember({
-                name: invite.email.split('@')[0],
-                email: invite.email,
-                role: invite.role,
-                avatar: '👤'
-            });
-        }
-    });
-
-    // 3. Login as Owner & Redirect
-    login('owner');
-    router.push('/dashboard');
+  const handleComplete = async () => {
+    setIsCompleting(true);
+    try {
+        const authUser = authContextUser || JSON.parse(localStorage.getItem('octoops_user') || '{}');
+        const { completeOnboarding } = useAppStore.getState();
+        
+        await completeOnboarding({
+            name: formData.projectName,
+            vision: formData.description,
+            team: invites,
+            ownerId: authUser?.id || 'u1',
+            ownerEmail: formData.ownerEmail || authUser?.email || 'sarah@octoops.dev',
+            deadline: formData.deadline,
+            totalMilestones: formData.milestones.length
+        });
+ 
+        login('owner');
+        router.push('/dashboard');
+    } catch (e) {
+        console.error("Launch failed:", e);
+        alert("Mission Critical: Infrastructure deployment failed. Check logs.");
+    } finally {
+        setIsCompleting(false);
+    }
   };
 
   const hasQA = invites.some(i => i.role === 'qa' && i.email.trim() !== '');
@@ -87,6 +142,12 @@ export default function OnboardingWizard() {
                 {step === 2 && 'Timeline & Goals'}
                 {step === 3 && 'Assemble Team'}
             </h1>
+            {onboardingData?.recommendations && step > 1 && (
+                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/25 text-[10px] font-mono text-[#00F0FF] uppercase tracking-widest animate-pulse">
+                    <Sparkles className="w-3 h-3" />
+                    AI Assisted • Smart Autofill Active
+                </div>
+            )}
         </div>
 
         {/* Step 1: Project Details */}
@@ -111,11 +172,21 @@ export default function OnboardingWizard() {
                     />
                 </div>
                 
-                {/* File Upload Mock */}
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-[#00F0FF]/30 transition-colors cursor-pointer bg-white/5">
-                    <Upload className="w-8 h-8 text-[#8B9DC3] mx-auto mb-3" />
-                    <p className="font-mono text-sm text-[#E8F0FF]">Upload Docs, Whiteboards or Briefs</p>
-                    <p className="text-xs text-[#8B9DC3] mt-1">OctoOps will analyze them for context</p>
+                {/* AI Analysis Trigger */}
+                <div 
+                    onClick={() => openModal('image-upload')}
+                    className="border-2 border-dashed border-[#00F0FF]/30 rounded-xl p-8 text-center hover:bg-[#00F0FF]/5 transition-all cursor-pointer group relative overflow-hidden"
+                >
+                    <div className="flex flex-col items-center gap-3 relative z-10">
+                        <div className="w-12 h-12 rounded-full bg-[#00F0FF]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Upload className="w-6 h-6 text-[#00F0FF]" />
+                        </div>
+                        <div>
+                            <p className="font-mono text-sm text-[#E8F0FF]">Upload Docs, Whiteboards or Briefs</p>
+                            <p className="text-xs text-[#8B9DC3] mt-1">OctoOps AI will analyze them to build your roadmap</p>
+                        </div>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#00F0FF]/0 via-[#00F0FF]/5 to-[#00F0FF]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                 </div>
             </div>
         )}
@@ -123,6 +194,12 @@ export default function OnboardingWizard() {
         {/* Step 2: Timeline */}
         {step === 2 && (
             <div className="space-y-6">
+                 {onboardingData?.recommendations && (
+                    <div className="bg-[#00F0FF]/5 border border-[#00F0FF]/20 rounded-xl p-3 text-[11px] text-[#8B9DC3] leading-relaxed flex gap-3 italic">
+                        <Sparkles className="w-4 h-4 text-[#00F0FF] shrink-0" />
+                        <span>The target deadline and milestones below have been auto-calculated by OctoOps AI based on your project vision. Adjust as needed.</span>
+                    </div>
+                 )}
                  <div>
                     <label className="font-mono text-sm text-[#8B9DC3] mb-2 block">Target Deadline</label>
                     <div className="relative">
@@ -185,6 +262,12 @@ export default function OnboardingWizard() {
         {/* Step 3: Team */}
         {step === 3 && (
             <div className="space-y-6">
+                {onboardingData?.recommendations && (
+                    <div className="bg-[#9D4EDD]/5 border border-[#9D4EDD]/20 rounded-xl p-3 text-[11px] text-[#8B9DC3] leading-relaxed flex gap-3 italic">
+                        <Sparkles className="w-4 h-4 text-[#9D4EDD] shrink-0" />
+                        <span>Ideally sized team slots have been generated for you. Provide emails to invite these key roles.</span>
+                    </div>
+                )}
                 <div className="bg-[#0A0E27]/50 p-4 rounded-xl border border-[#FFB800]/20 flex gap-3 text-sm text-[#FFB800]">
                     <ShieldCheck className="w-5 h-5 shrink-0" />
                     <p>A QA / Reviewer role is required to ensure quality control in the OctoOps verification loop.</p>
@@ -234,16 +317,36 @@ export default function OnboardingWizard() {
             ) : <div></div>}
             
             {step < 3 ? (
-                 <Button onClick={handleNext} className="bg-[#00F0FF] text-[#0A0E27] font-bold">
-                    Next Step <ArrowRight className="w-4 h-4 ml-2" />
+                 <Button 
+                    onClick={handleNext} 
+                    disabled={isAnalyzing}
+                    className="bg-[#00F0FF] text-[#0A0E27] font-bold h-12 px-8 min-w-[160px]"
+                 >
+                    {isAnalyzing && step === 1 ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Analyzing...
+                        </>
+                    ) : (
+                        <>
+                            Next Step <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                    )}
                  </Button>
             ) : (
                  <Button 
                     onClick={handleComplete} 
-                    disabled={!hasQA}
-                    className="bg-[#00FF88] text-[#0A0E27] font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!hasQA || isCompleting}
+                    className="bg-[#00FF88] text-[#0A0E27] font-bold h-12 px-8 min-w-[200px] glow-green disabled:opacity-50"
                  >
-                    Launch OctoOps
+                    {isCompleting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Initializing Network...
+                        </>
+                    ) : (
+                        "Launch OctoOps"
+                    )}
                  </Button>
             )}
         </div>

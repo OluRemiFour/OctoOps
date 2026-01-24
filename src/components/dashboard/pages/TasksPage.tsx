@@ -65,25 +65,6 @@ export default function TasksPage() {
     );
   }
 
-  if (!project) {
-    return (
-      <div className="max-w-7xl mx-auto flex items-center justify-center h-[60vh]">
-        <div className="text-center glass p-12 rounded-3xl border border-white/10 shadow-2xl">
-          <div className="w-20 h-20 bg-[#00FF88]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#00FF88]/30">
-            <Calendar className="w-10 h-10 text-[#00FF88]" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#E8F0FF] mb-2 tracking-tight">No Project Active</h2>
-          <p className="text-[#8B9DC3] mb-8 font-mono text-sm max-w-sm mx-auto leading-relaxed">
-            Every mission needs a plan. Create a project to start tracking your milestones and tasks.
-          </p>
-          <Button onClick={() => openModal('project-vision')} className="bg-[#00FF88] text-[#0A0E27] font-bold px-8 h-12 rounded-xl glow-green hover:scale-105 transition-transform">
-            Launch Onboarding
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -94,13 +75,15 @@ export default function TasksPage() {
             Manage and track all project tasks
           </p>
         </div>
-        <Button
-          onClick={() => openModal('add-task')}
-          className="bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Task
-        </Button>
+        {user?.role === 'owner' && (
+          <Button
+            onClick={() => openModal('add-task')}
+            className="bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Task
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -216,24 +199,26 @@ export default function TasksPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => openModal('edit-task', task)}
-                    className="text-[#00F0FF] hover:bg-[#00F0FF]/10"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeTask(task.id)}
-                    className="text-[#FF3366] hover:bg-[#FF3366]/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                {user?.role === 'owner' && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openModal('edit-task', task)}
+                      className="text-[#00F0FF] hover:bg-[#00F0FF]/10"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeTask(task.id)}
+                      className="text-[#FF3366] hover:bg-[#FF3366]/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ))

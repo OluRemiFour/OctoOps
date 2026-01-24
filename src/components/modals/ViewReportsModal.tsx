@@ -102,7 +102,7 @@ export default function ViewReportsModal() {
         { label: 'Active Risks', value: activeRisks },
         { label: 'High/Critical', value: highRisks, change: 'Requires immediate action' },
         { label: 'Risks Resolved', value: risks.filter((r) => r.resolved).length },
-        { label: 'Avg. Confidence', value: `${Math.round(risks.reduce((a, r) => a + r.confidence, 0) / risks.length)}%` },
+        { label: 'Avg. Confidence', value: `${risks.length > 0 ? Math.round(risks.reduce((a, r) => a + (r.confidence || 0), 0) / risks.length) : 0}%` },
         { label: 'Detection Rate', value: '94%' },
         { label: 'Prevention Rate', value: '78%' },
       ],

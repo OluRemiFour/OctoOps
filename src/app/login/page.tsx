@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Sparkles, ArrowRight, ShieldCheck, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export default function LoginPage() {
+function LoginContent() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,27 +16,30 @@ export default function LoginPage() {
   // State for Member Login (Invite Code)
   const [inviteCode, setInviteCode] = useState('');
 
-  // State for Admin Signup
+  // State for Admin Signup/Login
   const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   
-  const handleMemberLogin = () => {
-    // Simulate Invite Validation
-    const code = inviteCode.toLowerCase();
+  const handleMemberLogin = async () => {
+    if (!inviteCode) return;
     
-    if (code.includes('fail')) {
-        alert('Invalid invite code');
+    const success = await login(inviteCode);
+    if (!success) {
+        alert('Authentication Failed: Invalid code or unregistered email.');
         return;
-    }
-
-    if (code.includes('qa')) {
-        login('qa');
-    } else {
-        login('member');
     }
     router.push('/dashboard');
   };
 
   const handleAdminSignup = () => {
+    if (!adminEmail) {
+        alert('Please provide your email address to initialize your environment.');
+        return;
+    }
+    // Simple state persistence for onboarding
+    localStorage.setItem('octoops_owner_email', adminEmail);
+    localStorage.setItem('octoops_owner_name', adminName || 'Sarah Chen');
+    
     // Redirect to Onboarding Wizard to complete setup
     router.push('/onboarding');
   };
@@ -71,18 +74,32 @@ export default function LoginPage() {
           {isSignup ? (
             /* ADMIN SIGNUP FORM */
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-               <div className="space-y-2">
-                 <label className="font-mono text-xs text-[#00F0FF] uppercase tracking-wider ml-1">Full Name</label>
-                 <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B9DC3]" />
-                    <Input 
-                        value={adminName}
-                        onChange={(e) => setAdminName(e.target.value)}
-                        className="glass border-white/10 text-white pl-12 h-12" 
-                        placeholder="Sarah Connor" 
-                    />
-                 </div>
-               </div>
+                <div className="space-y-2">
+                  <label className="font-mono text-xs text-[#00F0FF] uppercase tracking-wider ml-1">Full Name</label>
+                  <div className="relative">
+                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B9DC3]" />
+                     <Input 
+                         value={adminName}
+                         onChange={(e) => setAdminName(e.target.value)}
+                         className="glass border-white/10 text-white pl-12 h-12" 
+                         placeholder="Sarah Chen" 
+                     />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-mono text-xs text-[#00F0FF] uppercase tracking-wider ml-1">Email Address</label>
+                  <div className="relative">
+                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B9DC3]" />
+                     <Input 
+                         value={adminEmail}
+                         onChange={(e) => setAdminEmail(e.target.value)}
+                         type="email"
+                         className="glass border-white/10 text-white pl-12 h-12" 
+                         placeholder="sarah@octoops.dev" 
+                     />
+                  </div>
+                </div>
                
                <div className="bg-[#00F0FF]/5 border border-[#00F0FF]/20 rounded-xl p-4 text-xs text-[#8B9DC3] leading-relaxed">
                   <span className="text-[#00F0FF] font-bold block mb-1">Getting Started:</span>
@@ -107,18 +124,18 @@ export default function LoginPage() {
             /* MEMBER LOGIN FORM */
             <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
                <div className="space-y-2">
-                 <label className="font-mono text-xs text-[#00FF88] uppercase tracking-wider ml-1">Invite Code / Link</label>
+                 <label className="font-mono text-xs text-[#00FF88] uppercase tracking-wider ml-1">Invite Code / Link / Email Address</label>
                  <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B9DC3]" />
                     <Input 
                         value={inviteCode}
                         onChange={(e) => setInviteCode(e.target.value)}
                         className="glass border-white/10 text-white pl-12 h-12" 
-                        placeholder="paste-invite-code-here" 
+                        placeholder="Enter code or owner email..." 
                     />
                  </div>
                  <p className="text-[10px] text-[#8B9DC3] pl-1 opacity-60">
-                    * Use 'qa-token' to simulate QA role, or any other code for Member.
+                    * Authenticated project owners can enter their email directly.
                  </p>
                </div>
                
@@ -126,7 +143,7 @@ export default function LoginPage() {
                 onClick={handleMemberLogin}
                 className="w-full h-14 bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold font-display text-lg rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.3)] transition-all hover:scale-[1.02]"
                >
-                 Access Dashboard
+                 Access Environment
                  <ArrowRight className="w-5 h-5 ml-2" />
                </Button>
 
@@ -155,5 +172,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0E27] flex items-center justify-center font-mono text-[#00F0FF]">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://octoops-backend.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -10,7 +10,7 @@ const api = axios.create({
 });
 
 export const auth = {
-  login: (inviteCode: string) => api.post('/auth/login', { inviteCode }),
+  login: (identifier: string) => api.post('/auth/login', { identifier }),
   signup: (data: any) => api.post('/auth/signup', data),
 };
 

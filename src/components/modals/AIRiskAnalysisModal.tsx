@@ -8,7 +8,7 @@ import { Sparkles, Loader2, AlertTriangle, ShieldCheck, TrendingDown } from 'luc
 import { risks as risksApi } from '@/lib/api';
 
 export default function AIRiskAnalysisModal() {
-  const { activeModal, closeModal, project, fetchRisks, addActivity, activateAgent } = useAppStore();
+  const { activeModal, closeModal, project, tasks, fetchRisks, addActivity, activateAgent } = useAppStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<any>(null);
 
@@ -20,7 +20,12 @@ export default function AIRiskAnalysisModal() {
     setIsAnalyzing(true);
     activateAgent('Risk', 5000);
     try {
-      const res = await risksApi.analyze(project._id);
+      const res = await risksApi.analyze(project._id, {
+        name: project.name,
+        tasks: tasks.map(t => ({ title: t.title, status: t.status, priority: t.priority })),
+        deadline: project.deadline,
+        teamSize: project.team?.length || 0
+      });
       setResults(res.data);
       addActivity({
         agent: 'Risk',

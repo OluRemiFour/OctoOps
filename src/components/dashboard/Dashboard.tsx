@@ -12,7 +12,6 @@ import NotificationToast from './NotificationToast';
 import TeamTaskBoard from './TeamTaskBoard';
 import MemberDashboard from './MemberDashboard';
 import QADashboard from './QADashboard';
-import ModalProvider from '@/components/modals/ModalProvider';
 import { useAppStore } from '@/lib/store';
 import { Bell } from 'lucide-react';
 import TasksPage from './pages/TasksPage';
@@ -67,7 +66,6 @@ export default function Dashboard() {
                 {activeTab === 'settings' && <SettingsPage />}
              </div>
              <NotificationToast />
-             <ModalProvider />
         </div>
     );
   }
@@ -84,7 +82,6 @@ export default function Dashboard() {
                 {activeTab === 'settings' && <SettingsPage />}
              </div>
              <NotificationToast />
-             <ModalProvider />
         </div>
     );
   }
@@ -162,8 +159,6 @@ export default function Dashboard() {
         {/* Notification Toast */}
         <NotificationToast />
         
-        {/* Modal Provider */}
-        <ModalProvider />
       </div>
     </div>
   );

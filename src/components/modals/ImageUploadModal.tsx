@@ -169,8 +169,9 @@ export default function ImageUploadModal() {
       read: false,
     });
 
-    // Save to onboarding data - pass both text and recommendations
+    // Save to onboarding data - pass name, vision and recommendations
     setOnboardingData({ 
+      name: scanResults?.name || project?.name || '',
       vision: extractedText,
       recommendations: scanResults 
     });
@@ -179,10 +180,13 @@ export default function ImageUploadModal() {
     resetModal();
     closeModal();
     
-    // Slight delay before opening the next modal to avoid UI race conditions
-    setTimeout(() => {
-      openModal('project-vision');
-    }, 150);
+    // Only open vision modal if we're in the dashboard (project exists)
+    // If onboarding, the wizard will update automatically via useEffect
+    if (project?._id || project?.id) {
+        setTimeout(() => {
+            openModal('project-vision');
+        }, 150);
+    }
   };
 
   const resetModal = () => {
@@ -223,43 +227,39 @@ export default function ImageUploadModal() {
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
-              onClick={() => fileInputRef.current?.click()}
-              className="glass rounded-2xl p-12 border-2 border-dashed border-[#FFB800]/30 hover:border-[#FFB800]/60 transition-colors text-center cursor-pointer group"
+              className="glass rounded-2xl p-12 border-2 border-dashed border-[#FFB800]/30 hover:border-[#FFB800]/60 transition-colors text-center cursor-pointer group relative overflow-hidden"
             >
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleFileSelect}
-                className="hidden"
-                id="image-upload"
-                ref={fileInputRef}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                id="image-upload-input"
               />
-              <label htmlFor="image-upload" className="cursor-pointer pointer-events-none">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-[#FFB800]/20 border-2 border-[#FFB800]/40 flex items-center justify-center">
-                    <Upload className="w-10 h-10 text-[#FFB800]" />
+              <div className="flex flex-col items-center gap-4 relative z-0">
+                <div className="w-20 h-20 rounded-2xl bg-[#FFB800]/20 border-2 border-[#FFB800]/40 flex items-center justify-center">
+                  <Upload className="w-10 h-10 text-[#FFB800]" />
+                </div>
+                <div>
+                  <div className="font-display text-xl font-bold text-[#E8F0FF] mb-2">
+                    Drop your image here
                   </div>
-                  <div>
-                    <div className="font-display text-xl font-bold text-[#E8F0FF] mb-2">
-                      Drop your image here
-                    </div>
-                    <div className="font-mono text-sm text-[#8B9DC3]">
-                      or click to browse • PNG, JPG, WEBP up to 10MB
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <span className="px-3 py-1 rounded-full bg-[#FFB800]/10 border border-[#FFB800]/30 font-mono text-xs text-[#FFB800]">
-                      Whiteboards
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/30 font-mono text-xs text-[#00F0FF]">
-                      Diagrams
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-[#9D4EDD]/10 border border-[#9D4EDD]/30 font-mono text-xs text-[#9D4EDD]">
-                      Screenshots
-                    </span>
+                  <div className="font-mono text-sm text-[#8B9DC3]">
+                    or click anywhere in this area to browse
                   </div>
                 </div>
-              </label>
+                <div className="flex gap-2 mt-4">
+                  <span className="px-3 py-1 rounded-full bg-[#FFB800]/10 border border-[#FFB800]/30 font-mono text-xs text-[#FFB800]">
+                    Whiteboards
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/30 font-mono text-xs text-[#00F0FF]">
+                    Diagrams
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-[#9D4EDD]/10 border border-[#9D4EDD]/30 font-mono text-xs text-[#9D4EDD]">
+                    Screenshots
+                  </span>
+                </div>
+              </div>
             </div>
           ) : (
             /* Split View */

@@ -207,7 +207,7 @@ export default function RiskCards() {
                       </div>
 
                       {/* Affected Tasks */}
-                      {risk.affectedTasks.length > 0 && (
+                      {risk.affectedTasks && risk.affectedTasks.length > 0 && (
                         <div>
                           <div className="font-mono text-xs text-[#8B9DC3] mb-2">
                             Affected Tasks
@@ -226,7 +226,7 @@ export default function RiskCards() {
                       )}
 
                       {/* Recommendations */}
-                      {!risk.resolved && risk.recommendations.length > 0 && (
+                      {!risk.resolved && risk.recommendations && risk.recommendations.length > 0 && (
                         <div>
                           <div className="font-mono text-xs text-[#8B9DC3] mb-2">
                             Recommended Actions

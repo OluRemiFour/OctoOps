@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Network, List, Plus, Bell } from 'lucide-react';
 import TaskTreeView from './TaskTreeView';
-import ModalProvider from '@/components/modals/ModalProvider';
 import NotificationToast from '@/components/dashboard/NotificationToast';
 import { useAppStore } from '@/lib/store';
 
@@ -99,7 +98,6 @@ export default function TaskBreakdown() {
         )}
         
         {/* Modals */}
-        <ModalProvider />
         <NotificationToast />
       </div>
     </div>

@@ -16,6 +16,7 @@ export default function AddTaskModal() {
   const [description, setDescription] = useState('');
   const [assignee, setAssignee] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [status, setStatus] = useState<'todo' | 'in-progress'>('todo');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,6 +37,7 @@ export default function AddTaskModal() {
       description,
       assignee,
       deadline,
+      priority,
       status,
     });
 
@@ -49,6 +51,7 @@ export default function AddTaskModal() {
     setDescription('');
     setAssignee('');
     setDeadline('');
+    setPriority('medium');
     setStatus('todo');
   };
 
@@ -129,6 +132,27 @@ export default function AddTaskModal() {
                 className="glass border-[#00F0FF]/20 focus:border-[#00F0FF]/60 bg-transparent font-mono text-[#E8F0FF]"
                 required
               />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="font-display text-sm font-bold text-[#E8F0FF]">Priority</Label>
+            <div className="flex gap-2">
+              {(['low', 'medium', 'high', 'critical'] as const).map((p) => (
+                <Button
+                  key={p}
+                  type="button"
+                  size="sm"
+                  onClick={() => setPriority(p)}
+                  className={`flex-1 capitalize font-mono text-xs ${
+                    priority === p 
+                      ? 'bg-[#00F0FF]/20 border-2 border-[#00F0FF]/40 text-[#00F0FF]' 
+                      : 'glass border-white/5 text-[#8B9DC3] hover:bg-white/5'
+                  }`}
+                >
+                  {p}
+                </Button>
+              ))}
             </div>
           </div>
 

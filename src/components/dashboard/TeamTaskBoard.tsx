@@ -14,9 +14,10 @@ export default function TeamTaskBoard() {
 
   // Filter tasks based on role
   const myTasks = tasks.filter((task) => {
-    if (user.role === 'owner') return true; // Owners see all
-    if (user.role === 'qa') return task.status === 'in-review' || task.assignee === user.name;
-    return task.assignee === user.name; // Members see their own
+    if (user.role === 'owner') return true; 
+    const isAssignee = task.assignee === user.name || task.assigneeEmail === user.email || task.assigneeName === user.name;
+    if (user.role === 'qa') return task.status === 'in-review' || isAssignee;
+    return isAssignee;
   });
 
   const getStatusColor = (status: Task['status']) => {

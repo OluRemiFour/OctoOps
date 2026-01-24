@@ -7,18 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import { team as teamApi } from '@/lib/api';
 import { UserPlus, MessageSquare } from 'lucide-react';
 
 const roles = [
   'Project Lead',
-  'Senior Developer',
-  'Junior Developer',
-  'Designer',
-  'Technical Writer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Fullstack Developer',
+  'UI/UX Designer',
   'QA Engineer',
+  'Mobile Developer',
   'DevOps Engineer',
+  'Content Creator',
   'Marketing Manager',
-  'Product Manager',
+  'Technical Writer',
 ];
 
 const avatars = ['👨‍💻', '👩‍💻', '👨‍🎨', '👩‍🎨', '🧑‍💼', '👨‍💼', '👩‍💼', '🧑‍🔧', '👨‍🔬', '👩‍🔬'];
@@ -40,29 +44,36 @@ export default function InviteMemberModal() {
     setIsSubmitting(true);
     activateAgent('Communication', 2000);
 
-    // Simulate sending invitation
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const { user: authUser } = useAuth();
 
-    addTeamMember({
-      name,
-      email,
-      role,
-      avatar,
-    });
+    // Real Invitation API call
+    try {
+        await teamApi.invite({
+            email,
+            role,
+            projectId: useAppStore.getState().project?._id,
+            invitedBy: authUser?.id || 'u1',
+            name // Passing name too if supported
+        });
 
-    addNotification({
-      agent: 'Communication',
-      title: 'Team Invitation Sent',
-      message: `Invitation sent to ${name} (${email})`,
-      type: 'success',
-      read: false,
-    });
-
+        addNotification({
+            agent: 'Communication',
+            title: 'Team Invitation Sent',
+            message: `Invitation sent to ${name} (${email})`,
+            type: 'success',
+            read: false,
+        });
+        
+        await useAppStore.getState().fetchTeam();
+    } catch (err) {
+        console.error("Failed to send invite:", err);
+        alert("System error: Could not transmit invitation data.");
+    }
     setIsSubmitting(false);
     resetForm();
     closeModal();
   };
-
+ 
   const resetForm = () => {
     setName('');
     setEmail('');

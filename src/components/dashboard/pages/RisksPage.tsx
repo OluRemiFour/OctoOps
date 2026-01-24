@@ -41,25 +41,6 @@ export default function RisksPage() {
     );
   }
 
-  if (!project) {
-    return (
-      <div className="max-w-7xl mx-auto flex items-center justify-center h-[60vh]">
-        <div className="text-center glass p-12 rounded-3xl border border-white/10 shadow-2xl">
-          <div className="w-20 h-20 bg-[#FF3366]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#FF3366]/30">
-            <AlertTriangle className="w-10 h-10 text-[#FF3366]" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#E8F0FF] mb-2 tracking-tight">No Project Active</h2>
-          <p className="text-[#8B9DC3] mb-8 font-mono text-sm max-w-sm mx-auto leading-relaxed">
-            Risk mitigation requires a target. Define your vision to enable AI-powered threat detection.
-          </p>
-          <Button onClick={() => openModal('project-vision')} className="bg-[#00FF88] text-[#0A0E27] font-bold px-8 h-12 rounded-xl glow-green hover:scale-105 transition-transform">
-            Launch Onboarding
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}

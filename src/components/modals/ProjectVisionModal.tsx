@@ -41,30 +41,47 @@ export default function ProjectVisionModal() {
   const isOpen = activeModal === 'project-vision';
 
   const handleAnalyze = async () => {
-    if (!projectName || (!vision && !recommendations?.extractedText)) {
-      alert('Please provide a project name and vision/mockup.');
+    const currentName = projectName || onboardingData?.name;
+    const currentVision = vision || onboardingData?.vision;
+
+    if (!currentName || !currentVision) {
+      alert('Please provide a project name and vision context (or upload a mockup).');
       return;
     }
     
     setIsAnalyzing(true);
     try {
-      const res = await ai.getTeamAssembly(projectName, vision);
-      console.log('AI Response:', res.data); // Helpful for real debugging
+      console.log('Analyzing vision for:', currentName);
+      const res = await ai.getTeamAssembly(currentName, currentVision);
+      console.log('AI Raw Response:', res.data);
       
       const data = res.data?.recommendations || res.data?.data || res.data?.teamAssembly || res.data;
       
-      if (!data || (!data.keyMilestones && !data.teamRecommendations && !data.roles)) {
-        throw new Error('AI returned incomplete data. Please try refining your vision.');
+      if (!data) {
+        throw new Error('No data received from AI. Please try refining your vision.');
+      }
+
+      // Map dynamic fields with fallbacks
+      const milestones = data.keyMilestones || data.milestones || [];
+      const team = data.teamRecommendations?.roles || data.teamRecommendations || data.roles || data.team || [];
+      const deadline = data.recommendedDeadline || data.deadline || '';
+
+      if (milestones.length === 0 && team.length === 0) {
+        console.warn('AI returned empty roadmap/team. Check mapping/response structure.');
       }
 
       setRecommendations(data);
-      setEditedDeadline(data.recommendedDeadline || data.deadline || '');
-      setEditedMilestones(data.keyMilestones || data.milestones || []);
-      setEditedTeam(data.teamRecommendations?.roles || data.teamRecommendations || data.roles || data.team || []);
+      setEditedDeadline(deadline);
+      setEditedMilestones(milestones);
+      setEditedTeam(team);
       setStep('recommendations');
       
-      // Save to global store for persistence
-      setOnboardingData({ recommendations: data });
+      // Save results to global store
+      setOnboardingData({ 
+        name: currentName,
+        vision: currentVision,
+        recommendations: data 
+      });
       
       activateAgent('Planner', 3000);
     } catch (error: any) {
@@ -85,10 +102,10 @@ export default function ProjectVisionModal() {
           deadline: editedDeadline,
           totalMilestones: editedMilestones.length
         });
+        
+        // Generate initial tasks
+        await ai.generateTasks(project._id);
       }
-
-      // Generate initial tasks
-      await ai.generateTasks(project!._id);
       
       addActivity({
         agent: 'Planner',
@@ -161,15 +178,21 @@ export default function ProjectVisionModal() {
                 Upload Mockup
               </Button>
               <Button
-                onClick={() => {
-                  setOnboardingData({ name: projectName, vision });
-                  handleAnalyze();
-                }}
+                onClick={handleAnalyze}
                 disabled={!projectName || !vision || isAnalyzing}
                 className="flex-[2] bg-[#9D4EDD] hover:bg-[#9D4EDD]/90 text-white h-16 font-bold text-lg rounded-xl glow-purple"
               >
-                {isAnalyzing ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
-                Next Step: AI Vision Scan
+                {isAnalyzing ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="animate-spin w-5 h-5" />
+                    Analyzing...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Next Step: AI Vision Scan
+                  </span>
+                )}
               </Button>
             </div>
           </div>
@@ -217,13 +240,15 @@ export default function ProjectVisionModal() {
                   <h3 className="font-bold uppercase tracking-wider">Ideal Team</h3>
                 </div>
                 <div className="space-y-3">
-                  {editedTeam.map((role, i) => (
+                  {(editedTeam || []).map((role, i) => (
                     <div key={i} className="glass p-4 rounded-xl border-white/5 space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-[#E8F0FF]">{role.role}</span>
-                        <span className="text-xs bg-white/5 px-2 py-1 rounded">Qty: {role.count}</span>
+                        <span className="font-bold text-[#E8F0FF]">{role?.role || 'Team Member'}</span>
+                        <span className="text-xs bg-white/5 px-2 py-1 rounded">Qty: {role?.count || 1}</span>
                       </div>
-                      <p className="text-[10px] text-[#8B9DC3]">{role.responsibilities.join(', ')}</p>
+                      <p className="text-[10px] text-[#8B9DC3]">
+                        {Array.isArray(role?.responsibilities) ? role.responsibilities.join(', ') : 'Assisting with project deliverables'}
+                      </p>
                     </div>
                   ))}
                 </div>

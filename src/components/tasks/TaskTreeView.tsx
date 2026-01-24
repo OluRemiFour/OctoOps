@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, MoreVertical, Clock, AlertCircle, CheckCircle2, Edit2, Trash2, Play, Pause } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoreVertical, Clock, AlertCircle, CheckCircle2, Edit2, Trash2, Play, Pause, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore, Task } from '@/lib/store';
 import {
@@ -17,6 +17,7 @@ const sampleTasks: Task[] = [
     id: '1',
     title: 'Beta Release Milestone',
     status: 'in-progress',
+    priority: 'high',
     assignee: 'Sarah Chen',
     deadline: 'Mar 18',
     subtasks: [
@@ -24,17 +25,19 @@ const sampleTasks: Task[] = [
         id: '1-1',
         title: 'Complete final UI polish',
         status: 'in-progress',
+        priority: 'medium',
         assignee: 'Mike Johnson',
         deadline: 'Mar 15',
         subtasks: [
-          { id: '1-1-1', title: 'Fix navigation animations', status: 'done', assignee: 'Mike', deadline: 'Mar 12' },
-          { id: '1-1-2', title: 'Update color scheme', status: 'in-progress', assignee: 'Mike', deadline: 'Mar 14' },
+          { id: '1-1-1', title: 'Fix navigation animations', status: 'done', priority: 'low', assignee: 'Mike', deadline: 'Mar 12' },
+          { id: '1-1-2', title: 'Update color scheme', status: 'in-progress', priority: 'medium', assignee: 'Mike', deadline: 'Mar 14' },
         ]
       },
       {
         id: '1-2',
         title: 'Run security audit',
         status: 'todo',
+        priority: 'critical',
         assignee: 'David Lee',
         deadline: 'Mar 16',
       },
@@ -42,6 +45,7 @@ const sampleTasks: Task[] = [
         id: '1-3',
         title: 'Prepare beta documentation',
         status: 'done',
+        priority: 'low',
         assignee: 'Emma Wilson',
         deadline: 'Mar 10',
       },
@@ -51,23 +55,25 @@ const sampleTasks: Task[] = [
     id: '2',
     title: 'Marketing Campaign',
     status: 'in-progress',
+    priority: 'medium',
     assignee: 'Lisa Parker',
     deadline: 'Mar 25',
     subtasks: [
-      { id: '2-1', title: 'Create social media content', status: 'in-progress', assignee: 'Lisa', deadline: 'Mar 20' },
-      { id: '2-2', title: 'Design email templates', status: 'todo', assignee: 'John', deadline: 'Mar 22' },
-      { id: '2-3', title: 'Schedule promotional posts', status: 'blocked', assignee: 'Lisa', deadline: 'Mar 24' },
+      { id: '2-1', title: 'Create social media content', status: 'in-progress', priority: 'medium', assignee: 'Lisa', deadline: 'Mar 20' },
+      { id: '2-2', title: 'Design email templates', status: 'todo', priority: 'low', assignee: 'John', deadline: 'Mar 22' },
+      { id: '2-3', title: 'Schedule promotional posts', status: 'blocked', priority: 'medium', assignee: 'Lisa', deadline: 'Mar 24' },
     ]
   },
   {
     id: '3',
     title: 'Public Launch',
     status: 'todo',
+    priority: 'critical',
     assignee: 'Sarah Chen',
     deadline: 'Apr 1',
     subtasks: [
-      { id: '3-1', title: 'Deploy to production', status: 'todo', assignee: 'DevOps', deadline: 'Apr 1' },
-      { id: '3-2', title: 'Monitor initial metrics', status: 'todo', assignee: 'Sarah', deadline: 'Apr 2' },
+      { id: '3-1', title: 'Deploy to production', status: 'todo', priority: 'critical', assignee: 'DevOps', deadline: 'Apr 1' },
+      { id: '3-2', title: 'Monitor initial metrics', status: 'todo', priority: 'high', assignee: 'Sarah', deadline: 'Apr 2' },
     ]
   },
 ];
@@ -90,7 +96,7 @@ export default function TaskTreeView() {
   };
 
   const cycleStatus = (task: Task) => {
-    const statusOrder: Array<'todo' | 'in-progress' | 'done' | 'blocked'> = ['todo', 'in-progress', 'done', 'blocked'];
+    const statusOrder: Array<'todo' | 'in-progress' | 'in-review' | 'done' | 'blocked'> = ['todo', 'in-progress', 'in-review', 'done', 'blocked'];
     const currentIndex = statusOrder.indexOf(task.status);
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
     
@@ -130,6 +136,7 @@ export default function TaskTreeView() {
     const statusConfig = {
       'todo': { color: '#8B9DC3', label: 'To Do', icon: Clock },
       'in-progress': { color: '#00F0FF', label: 'In Progress', icon: Clock },
+      'in-review': { color: '#9D4EDD', label: 'In Review', icon: Zap },
       'done': { color: '#00FF88', label: 'Done', icon: CheckCircle2 },
       'blocked': { color: '#FF3366', label: 'Blocked', icon: AlertCircle }
     };

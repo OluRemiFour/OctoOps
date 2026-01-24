@@ -5,7 +5,6 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserPlus, Trash2, Mail, Bell, MoreVertical, Users, Award, Clock, CheckCircle } from 'lucide-react';
-import ModalProvider from '@/components/modals/ModalProvider';
 import NotificationToast from '@/components/dashboard/NotificationToast';
 import {
   DropdownMenu,
@@ -255,8 +254,6 @@ export default function TeamPortal() {
           </button>
         </div>
         
-        {/* Modals */}
-        <ModalProvider />
         <NotificationToast />
       </div>
     </div>

@@ -14,7 +14,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (role: UserRole) => void;
+  login: (identifier: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -32,42 +32,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = (role: UserRole) => {
-    let mockUser: User;
-    
-    switch (role) {
-      case 'owner':
-        mockUser = {
-          id: 'u1',
-          name: 'Sarah Chen',
-          email: 'sarah@octoops.dev',
-          role: 'owner',
-          avatar: '👩‍💼'
-        };
-        break;
-      case 'qa':
-        mockUser = {
-          id: 'u3',
-          name: 'Emma Wilson', // Using Emma as QA/Reviewer for demo
-          email: 'emma@octoops.dev',
-          role: 'qa',
-          avatar: '👩‍🎨'
-        };
-        break;
-      case 'member':
-      default:
-        mockUser = {
-          id: 'u2',
-          name: 'Mike Johnson',
-          email: 'mike@octoops.dev',
-          role: 'member',
-          avatar: '👨‍💻'
-        };
-        break;
+  const login = async (identifier: string) => {
+    try {
+        const { auth } = await import('./api');
+        const res = await auth.login(identifier);
+        
+        if (res.data?.user) {
+            const loggedUser = {
+                ...res.data.user,
+                id: res.data.user._id // Map _id to id for frontend consistency
+            };
+            setUser(loggedUser);
+            localStorage.setItem('octoops_user', JSON.stringify(loggedUser));
+            return true;
+        }
+        return false;
+    } catch (err) {
+        console.error("Login verification failed:", err);
+        return false;
     }
-
-    setUser(mockUser);
-    localStorage.setItem('octoops_user', JSON.stringify(mockUser));
   };
 
   const logout = () => {

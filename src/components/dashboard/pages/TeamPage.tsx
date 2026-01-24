@@ -98,18 +98,6 @@ export default function TeamPage() {
     );
   }
 
-  if (!project) {
-    return (
-      <div className="max-w-7xl mx-auto flex items-center justify-center h-[60vh]">
-        <div className="text-center glass p-12 rounded-3xl border border-white/10">
-          <h2 className="text-2xl font-bold text-[#E8F0FF] mb-2">No Project Active</h2>
-          <p className="text-[#8B9DC3] mb-6">Create or select a project to manage your team.</p>
-          <Button onClick={() => openModal('create-project')} className="bg-[#00FF88] text-[#0A0E27]">Create Project</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -122,7 +110,7 @@ export default function TeamPage() {
         </div>
         {user?.role === 'owner' && (
           <Button
-            onClick={() => openModal('invite-team')}
+            onClick={() => openModal('invite-member')}
             className="bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -177,22 +165,49 @@ export default function TeamPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="mt-4 space-y-2">
+                   <div className="flex items-center justify-between text-xs font-bold text-[#8B9DC3] uppercase tracking-wider">
+                      <span>Recent Assignments</span>
+                      <span className="text-[#00F0FF]">{useAppStore.getState().tasks.filter(t => t.assignee === member.email || t.assigneeName === member.name).length} Tasks</span>
+                   </div>
+                   <div className="space-y-1">
+                      {useAppStore.getState().tasks
+                        .filter(t => t.assignee === member.email || t.assigneeName === member.name)
+                        .slice(0, 2)
+                        .map(task => (
+                           <div key={task.id} className="text-[10px] py-1 px-2 rounded bg-white/5 border border-white/10 text-[#E8F0FF] truncate">
+                              • {task.title}
+                           </div>
+                        ))}
+                   </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-6">
                   <span className={`text-xs px-3 py-1 rounded-full border font-bold ${roleBadge.bg} ${roleBadge.text} ${roleBadge.border} flex items-center gap-1`}>
                     <RoleIcon className="w-3 h-3" />
                     {member.role.toUpperCase()}
                   </span>
 
-                  {user?.role === 'owner' && member.role !== 'owner' && (
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleRemoveMember(member._id)}
-                      className="text-[#FF3366] hover:bg-[#FF3366]/10"
+                      onClick={() => alert(`Resending specialized onboarding briefing to ${member.name}...`)}
+                      className="text-[#00FF88] hover:bg-[#00FF88]/10 text-[10px] font-bold h-7"
                     >
-                      <UserMinus className="w-4 h-4" />
+                      Invite
                     </Button>
-                  )}
+                    {user?.role === 'owner' && member.role !== 'owner' && (
+                        <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveMember(member._id)}
+                        className="text-[#FF3366] hover:bg-[#FF3366]/10 h-7"
+                        >
+                        <UserMinus className="w-4 h-4" />
+                        </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

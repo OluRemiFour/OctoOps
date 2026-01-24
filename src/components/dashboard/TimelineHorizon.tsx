@@ -13,19 +13,43 @@ interface Milestone {
   progress: number;
 }
 
-const milestones: Milestone[] = [
-  { id: '1', title: 'Kick-off & Planning', date: 'Jan 15', status: 'completed', progress: 100 },
-  { id: '2', title: 'Design System', date: 'Jan 28', status: 'completed', progress: 100 },
-  { id: '3', title: 'Core Features Dev', date: 'Feb 12', status: 'completed', progress: 100 },
-  { id: '4', title: 'API Integration', date: 'Feb 25', status: 'completed', progress: 100 },
-  { id: '5', title: 'Testing Phase', date: 'Mar 8', status: 'completed', progress: 100 },
-  { id: '6', title: 'Beta Release', date: 'Mar 18', status: 'upcoming', progress: 75 },
-  { id: '7', title: 'Marketing Campaign', date: 'Mar 25', status: 'upcoming', progress: 40 },
-  { id: '8', title: 'Public Launch', date: 'Apr 1', status: 'upcoming', progress: 0 },
-];
-
 export default function TimelineHorizon() {
-  const { openModal } = useAppStore();
+  const { tasks, project, openModal } = useAppStore();
+
+  // DERIVE MILESTONES FROM TASKS
+  const milestones = React.useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    
+    const uniqueMilestones = Array.from(new Set(tasks.map(t => t.milestone).filter(Boolean)));
+    
+    return uniqueMilestones.map((m, idx) => {
+        const milestoneTasks = tasks.filter(t => t.milestone === m);
+        const completed = milestoneTasks.filter(t => t.status === 'done').length;
+        const total = milestoneTasks.length;
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        // Find latest deadline for this milestone
+        const deadlines = milestoneTasks.map(t => t.deadline).filter(Boolean);
+        const lastDeadline = deadlines.length > 0 ? new Date(Math.max(...deadlines.map(d => new Date(d).getTime()))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pending';
+
+        return {
+            id: String(idx + 1),
+            title: m || 'Initialization',
+            date: lastDeadline,
+            status: progress === 100 ? 'completed' : 'upcoming',
+            progress
+        };
+    });
+  }, [tasks]);
+
+  if (milestones.length === 0) {
+      return (
+        <div className="glass rounded-3xl p-8 text-center border border-white/5 opacity-50">
+             <Clock className="w-12 h-12 text-[#8B9DC3] mx-auto mb-4" />
+             <p className="font-mono text-sm text-[#8B9DC3]">Awaiting AI Roadmap Architecture...</p>
+        </div>
+      );
+  }
 
   return (
     <div className="glass rounded-3xl p-8">

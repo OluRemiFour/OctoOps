@@ -7,17 +7,24 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAppStore } from '@/lib/store';
 import { Settings, Bell, Shield, Palette, Zap, Save, CheckCircle, AlertTriangle, MessageSquare, Lightbulb } from 'lucide-react';
-import ModalProvider from '@/components/modals/ModalProvider';
 import NotificationToast from '@/components/dashboard/NotificationToast';
 
 export default function SettingsPage() {
   const { project, updateProject, openModal, notifications, addNotification, activateAgent } = useAppStore();
-  const [projectName, setProjectName] = useState(project.name);
-  const [projectDescription, setProjectDescription] = useState(project.description);
+  const [projectName, setProjectName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
   const [notifications48h, setNotifications48h] = useState(true);
   const [notificationsStalled, setNotificationsStalled] = useState(true);
   const [notificationsRisk, setNotificationsRisk] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state with project data when it loads
+  React.useEffect(() => {
+    if (project) {
+      setProjectName(project.name);
+      setProjectDescription(project.description || '');
+    }
+  }, [project]);
   
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
@@ -262,7 +269,6 @@ export default function SettingsPage() {
         </div>
         
         {/* Modals */}
-        <ModalProvider />
         <NotificationToast />
       </div>
     </div>

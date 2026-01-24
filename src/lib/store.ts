@@ -133,6 +133,8 @@ interface AppState {
   setHydrated: (val: boolean) => void;
   onboardingData: { name: string; vision: string; extractedItems: any[]; recommendations?: any } | null;
   setOnboardingData: (data: any) => void;
+  completeOnboarding: (data: { name: string; vision: string; team: any[]; ownerId: string; ownerEmail?: string; deadline?: string; totalMilestones?: number }) => Promise<void>;
+  startAgentHeartbeat: () => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -160,6 +162,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             get().fetchTeam(),
             get().fetchRisks()
           ]);
+          get().startAgentHeartbeat();
         }
     } catch (err) {
         console.error("Failed to fetch project", err);
@@ -167,7 +170,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ isHydrated: true });
     }
   },
-  updateProject: (updates) => set((state) => ({ project: state.project ? { ...state.project, ...updates } : null })),
+  updateProject: async (updates) => {
+    try {
+        const currentProject = get().project;
+        if (!currentProject?._id) {
+            set((state) => ({ project: state.project ? { ...state.project, ...updates } : null }));
+            return;
+        }
+        const res = await projects.update({ ...currentProject, ...updates });
+        set({ project: res.data });
+        get().addActivity({ agent: 'Planner', action: `Updated project settings`, time: 'Just now' });
+    } catch (err) {
+        console.error("Failed to update project", err);
+    }
+  },
 
   // Tasks
   tasks: [],
@@ -323,13 +339,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Activities
-  activities: [
-    { id: '1', agent: 'Risk', action: 'Detected potential deadline conflict for Launch Feature', time: '2m ago', timestamp: new Date(Date.now() - 2 * 60 * 1000) },
-    { id: '2', agent: 'Execution', action: 'Task "Design Review" marked complete by Sarah', time: '5m ago', timestamp: new Date(Date.now() - 5 * 60 * 1000) },
-    { id: '3', agent: 'Communication', action: 'Sent deadline reminder to 3 team members', time: '12m ago', timestamp: new Date(Date.now() - 12 * 60 * 1000) },
-    { id: '4', agent: 'Planner', action: 'Updated timeline after milestone completion', time: '18m ago', timestamp: new Date(Date.now() - 18 * 60 * 1000) },
-    { id: '5', agent: 'Recommendation', action: 'Suggested parallelizing 2 independent tasks', time: '25m ago', timestamp: new Date(Date.now() - 25 * 60 * 1000) },
-  ],
+  activities: [],
   addActivity: (activity) => {
     const newActivity = { ...activity, id: generateId(), timestamp: new Date() };
     set((state) => ({ activities: [newActivity, ...state.activities].slice(0, 50) }));
@@ -365,7 +375,84 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAgentState: (agent, state) => {
     set((s) => ({ agentStates: { ...s.agentStates, [agent]: state } }));
   },
-  activateAgent: (agent, duration = 2000) => {
+  completeOnboarding: async (data) => {
+    try {
+        // Activate ALL agents during launch
+        Object.keys(get().agentStates).forEach(agent => get().activateAgent(agent, 6000));
+
+        // 1. Create Project
+        const projectRes = await projects.create({
+            name: data.name,
+            description: data.vision,
+            status: 'launching',
+            ownerId: data.ownerId,
+            ownerEmail: data.ownerEmail,
+            deadline: data.deadline,
+            totalMilestones: data.totalMilestones || 0,
+            healthScore: 100
+        });
+        const newProject = projectRes.data;
+        set({ project: newProject });
+
+        // 2. Invite Team Members with Roles
+        for (const member of data.team) {
+            if (member.email) {
+                await teamApi.invite({ 
+                    ...member, 
+                    projectId: newProject._id,
+                    invitedBy: data.ownerId
+                });
+            }
+        }
+
+        // 3. Trigger initial AI Task Generation
+        const taskRes = await ai.generateTasks(newProject._id);
+        if (taskRes.data) {
+            await get().fetchTasks();
+            get().addActivity({ 
+                agent: 'Planner', 
+                action: `Autonomous roadmap successfully deployed with ${taskRes.data.length} mission-critical tasks.`, 
+                time: 'Just now' 
+            });
+        }
+
+        // 4. Update status and start heartbeat
+        get().updateProject({ status: 'active' });
+        get().startAgentHeartbeat();
+
+    } catch (err) {
+        console.error("Onboarding Completion Failed:", err);
+        throw err;
+    }
+  },
+  startAgentHeartbeat: () => {
+    const agents = ['Planner', 'Execution', 'Risk', 'Communication', 'Recommendation'];
+    setInterval(() => {
+        const randomAgent = agents[Math.floor(Math.random() * agents.length)];
+        const { project } = get();
+        if (project) {
+            get().activateAgent(randomAgent, 4000);
+            
+            // Occasionally add background activity
+            if (Math.random() > 0.7) {
+                const activityMap: Record<string, string[]> = {
+                    Risk: ['Scanning network protocols', 'Validating system integrity', 'Analyzing project velocity'],
+                    Communication: ['Syncing team schedules', 'Optimizing channel bandwidth', 'Aggregating mission reports'],
+                    Execution: ['Monitoring task throughput', 'Validating milestone dependencies', 'Optimizing resource allocation'],
+                    Planner: ['Refining long-term horizon', 'Analyzing mission priority shifts', 'Recalculating critical path'],
+                    Recommendation: ['Identifying parallelization opportunities', 'Suggesting team efficiency gains', 'Spotlight: Low latency detected']
+                };
+                const actions = activityMap[randomAgent];
+                get().addActivity({
+                    agent: randomAgent as any,
+                    action: actions[Math.floor(Math.random() * actions.length)],
+                    time: 'Just now'
+                });
+            }
+        }
+    }, 15000);
+  },
+  activateAgent: (agent, duration = 3000) => {
     get().setAgentState(agent, 'active');
     setTimeout(() => get().setAgentState(agent, 'idle'), duration);
   },

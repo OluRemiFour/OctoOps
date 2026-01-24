@@ -86,13 +86,17 @@ export default function MemberDashboard() {
   }
 
   const getIsMyTask = (t: Task) => {
+    if (!user) return false;
     const assigneeData = t.assignee as any;
+    const userIdentifier = user.email || user.name;
+    const assigneeIdentifier = t.assigneeEmail || t.assigneeName || (typeof t.assignee === 'string' ? t.assignee : '');
+    
     return (
-      assigneeData?.name === user?.name || 
-      assigneeData?.email === user?.email || 
-      t.assigneeName === user?.name ||
-      t.assigneeEmail === user?.email ||
-      assigneeData === user?.email
+      assigneeData?.email === user.email || 
+      assigneeData?.name === user.name ||
+      assigneeIdentifier === user.email ||
+      assigneeIdentifier === user.name ||
+      t.assignee === user.id
     );
   };
 

@@ -6,31 +6,56 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 
 export default function ProjectContextPanel() {
-  const { project, team, openModal } = useAppStore();
+  const { project, team, onboardingData, openModal } = useAppStore();
+
   if (!project) {
+    const isPreview = onboardingData?.name || onboardingData?.vision;
+    
     return (
-      <div className="glass rounded-3xl p-12 text-center border-2 border-dashed border-[#00F0FF]/20">
-        <Sparkles className="w-12 h-12 text-[#9D4EDD] mx-auto mb-4 animate-pulse" />
-        <h2 className="font-display text-2xl font-bold text-[#E8F0FF] mb-2">No Active Mission</h2>
-        <p className="font-mono text-sm text-[#8B9DC3] mb-8 max-w-md mx-auto">
-          Start by defining your project vision or uploading a mockup. 
-          OctoOps AI will help you assemble the team and roadmap.
-        </p>
-        <div className="flex justify-center gap-4">
+      <div className="glass rounded-3xl p-8 border-2 border-dashed border-[#00F0FF]/20">
+        <div className="flex items-center gap-3 mb-4">
+            <Sparkles className="w-6 h-6 text-[#9D4EDD] shrink-0 animate-pulse" />
+            <h2 className="font-display text-xl font-bold text-[#E8F0FF]">
+                {isPreview ? 'Project Projection: ' + onboardingData.name : 'Mission Deployment Ready'}
+            </h2>
+        </div>
+        
+        {isPreview ? (
+            <div className="space-y-4">
+                <p className="font-mono text-sm text-[#8B9DC3] line-clamp-3 italic">
+                    "{onboardingData.vision}"
+                </p>
+                <div className="bg-[#00F0FF]/5 border border-[#00F0FF]/20 rounded-xl p-4 flex gap-4 items-center">
+                    <TrendingUp className="w-5 h-5 text-[#00F0FF] shrink-0" />
+                    <div>
+                        <div className="text-xs font-bold text-[#00F0FF] uppercase tracking-wider">AI Readiness Level</div>
+                        <div className="text-xs text-[#8B9DC3]">Network parameters validated. Roadmap generation standby.</div>
+                    </div>
+                </div>
+            </div>
+        ) : (
+            <p className="font-mono text-sm text-[#8B9DC3] mb-6">
+                Define your project vision or upload a mockup to initialize your autonomous agent network.
+            </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-4">
           <Button
             onClick={() => openModal('project-vision')}
-            className="bg-[#9D4EDD] hover:bg-[#9D4EDD]/90 text-white font-bold h-12 px-8 rounded-xl glow-purple"
+            className={`font-bold h-12 px-8 rounded-xl transition-all ${isPreview ? 'bg-[#00FF88] text-[#0A0E27] glow-green' : 'bg-[#9D4EDD] text-white glow-purple'}`}
           >
-            <Sparkles className="w-5 h-5 mr-2" />
-            Define Project Vision
+            <Rocket className="w-5 h-5 mr-2" />
+            {isPreview ? 'Launch Mission' : 'Define Vision'}
           </Button>
-          <Button
-            onClick={() => openModal('image-upload')}
-            className="glass border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10 font-bold h-12 px-8 rounded-xl"
-          >
-            <ImageIcon className="w-5 h-5 mr-2" />
-            Upload Mockup
-          </Button>
+          {!isPreview && (
+            <Button
+                onClick={() => openModal('image-upload')}
+                className="glass border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10 font-bold h-12 px-8 rounded-xl"
+            >
+                <ImageIcon className="w-5 h-5 mr-2" />
+                Upload Mockup
+            </Button>
+          )}
         </div>
       </div>
     );

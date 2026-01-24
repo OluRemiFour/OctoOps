@@ -3,7 +3,6 @@
 import React from 'react';
 import RiskHeatmap from './RiskHeatmap';
 import RiskCards from './RiskCards';
-import ModalProvider from '@/components/modals/ModalProvider';
 import NotificationToast from '@/components/dashboard/NotificationToast';
 import { useAppStore } from '@/lib/store';
 import { Bell, AlertTriangle } from 'lucide-react';
@@ -67,7 +66,6 @@ export default function RiskDashboard() {
         </div>
         
         {/* Modals */}
-        <ModalProvider />
         <NotificationToast />
       </div>
     </div>
