@@ -8,9 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppStore } from '@/lib/store';
 import { Sparkles, Users, Calendar, Target, Rocket, Loader2, Image as ImageIcon, Edit3, Check } from 'lucide-react';
 import { ai, projects as projectsApi } from '@/lib/api';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ProjectVisionModal() {
   const { activeModal, openModal, closeModal, project, updateProject, fetchProject, fetchTasks, addActivity, activateAgent, onboardingData, setOnboardingData } = useAppStore();
+  const { toast } = useToast();
   const [projectName, setProjectName] = useState('');
   const [vision, setVision] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -45,7 +47,11 @@ export default function ProjectVisionModal() {
     const currentVision = vision || onboardingData?.vision;
 
     if (!currentName || !currentVision) {
-      alert('Please provide a project name and vision context (or upload a mockup).');
+      toast({
+        title: "Missing Information",
+        description: "Please provide a project name and vision context (or upload a mockup).",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -86,7 +92,11 @@ export default function ProjectVisionModal() {
       activateAgent('Planner', 3000);
     } catch (error: any) {
       console.error('Failed to analyze vision:', error);
-      alert(error.message || 'AI analysis failed. Please try again.');
+      toast({
+        title: "Analysis Failed",
+        description: error.message || 'AI analysis failed. Please try again.',
+        variant: "destructive"
+      });
     } finally {
       setIsAnalyzing(false);
     }
@@ -121,10 +131,17 @@ export default function ProjectVisionModal() {
       await fetchProject();
       await fetchTasks();
       closeModal();
-      alert('OctoOps Launched! AI Agents are now active and team has been assembled.');
+      toast({
+        title: "OctoOps Launched",
+        description: "AI Agents are now active and team has been assembled.",
+      });
     } catch (error) {
       console.error('Failed to launch project:', error);
-      alert('Failed to launch project tasks.');
+      toast({
+        title: "Launch Error",
+        description: "Failed to launch project tasks.",
+        variant: "destructive"
+      });
     } finally {
       setIsAnalyzing(false);
     }

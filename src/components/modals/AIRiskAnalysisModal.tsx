@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { Sparkles, Loader2, AlertTriangle, ShieldCheck, TrendingDown } from 'lucide-react';
 import { risks as risksApi } from '@/lib/api';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function AIRiskAnalysisModal() {
   const { activeModal, closeModal, project, tasks, fetchRisks, addActivity, activateAgent } = useAppStore();
+  const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<any>(null);
 
@@ -35,7 +37,11 @@ export default function AIRiskAnalysisModal() {
       await fetchRisks();
     } catch (error) {
       console.error('AI Risk Analysis failed:', error);
-      alert('Analysis failed. Please ensure your Gemini API key is valid.');
+      toast({
+        title: "Analysis Failed",
+        description: "Analysis failed. Please ensure your Gemini API key is valid.",
+        variant: "destructive"
+      });
     } finally {
       setIsAnalyzing(false);
     }

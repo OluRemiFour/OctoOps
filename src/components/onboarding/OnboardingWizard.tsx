@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Sparkles, Upload, Calendar, Users, ArrowRight, ShieldCheck, Plus, Trash2, Loader2 } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function OnboardingWizard() {
   const router = useRouter();
   const { login, user: authContextUser } = useAuth();
   const { updateProject, addTeamMember, openModal, onboardingData, setOnboardingData, activateAgent } = useAppStore();
   const [step, setStep] = useState(1);
+    const { toast } = useToast();
   const [formData, setFormData] = useState({
     projectName: '',
     description: '',
@@ -25,8 +27,14 @@ export default function OnboardingWizard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // Sync with onboarding data from store
+  // Sync with onboarding data from store and localStorage
   React.useEffect(() => {
+    // Load owner email from setup if available
+    const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('octoops_owner_email') : '';
+    if (storedEmail && !formData.ownerEmail) {
+        setFormData(prev => ({ ...prev, ownerEmail: storedEmail }));
+    }
+
     if (onboardingData) {
       setFormData(prev => ({
         ...prev,
@@ -70,7 +78,11 @@ export default function OnboardingWizard() {
                 setStep(step + 1);
             } catch (e: any) {
                 console.error('AI Onboarding Error:', e);
-                alert(`AI Analysis Required: ${e.message || 'The system could not analyze your project pulse. Please try again.'}`);
+                toast({
+                    title: "AI Analysis Failed",
+                    description: e.message || 'The system could not analyze your project pulse. Please try again.',
+                    variant: "destructive"
+                });
                 // DO NOT increment step
             } finally {
                 setIsAnalyzing(false);
@@ -93,24 +105,64 @@ export default function OnboardingWizard() {
   const handleComplete = async () => {
     setIsCompleting(true);
     try {
-        const authUser = authContextUser || JSON.parse(localStorage.getItem('octoops_user') || '{}');
+        let authUser = authContextUser || JSON.parse(localStorage.getItem('octoops_user') || '{}');
+        const ownerEmail = formData.ownerEmail || authUser?.email || 'sarah@octoops.dev';
+        const ownerName = localStorage.getItem('octoops_owner_name') || 'Project Owner';
+
+        // 1. Ensure Owner User Exists in DB (Signup/Login)
+        try {
+            const { auth } = await import('@/lib/api');
+            // Try explicit signup first to ensure record exists
+            const signupRes = await auth.signup({
+                name: ownerName,
+                email: ownerEmail,
+                role: 'owner',
+                projectName: formData.projectName // Context
+            });
+            if (signupRes.data?.user) {
+                authUser = { ...signupRes.data.user, id: signupRes.data.user._id };
+            }
+        } catch (err: any) {
+            // If user already exists (400), try to fetch/login to get ID
+            console.log("User might already exist, attempting login...", err);
+            const { auth } = await import('@/lib/api');
+            const loginRes = await auth.login(ownerEmail);
+            if (loginRes.data?.user) {
+                authUser = { ...loginRes.data.user, id: loginRes.data.user._id };
+            }
+        }
+
+        if (!authUser?.id) {
+            throw new Error("Could not authenticate project owner. Please sign in.");
+        }
+
         const { completeOnboarding } = useAppStore.getState();
         
         await completeOnboarding({
             name: formData.projectName,
             vision: formData.description,
             team: invites,
-            ownerId: authUser?.id || 'u1',
-            ownerEmail: formData.ownerEmail || authUser?.email || 'sarah@octoops.dev',
+            ownerId: authUser.id, // Strictly use DB ID
+            ownerEmail: ownerEmail,
             deadline: formData.deadline,
             totalMilestones: formData.milestones.length
         });
  
-        login('owner');
+        // Log in context
+        await login(ownerEmail);
         router.push('/dashboard');
-    } catch (e) {
+        
+        toast({
+            title: "Project Launched",
+            description: "Welcome to your OctoOps command center.",
+        });
+    } catch (e: any) {
         console.error("Launch failed:", e);
-        alert("Mission Critical: Infrastructure deployment failed. Check logs.");
+        toast({
+            title: "Launch Failed",
+            description: e.message || "Mission Critical: Infrastructure deployment failed.",
+            variant: "destructive"
+        });
     } finally {
         setIsCompleting(false);
     }

@@ -8,6 +8,7 @@ import { useAppStore } from '@/lib/store';
 import { Image, Upload, Scan, CheckCircle, Plus, X, Edit3, Loader2 } from 'lucide-react';
 import { ai } from '@/lib/api';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from "@/components/ui/use-toast";
 
 interface ExtractedItem {
   id: string;
@@ -19,6 +20,7 @@ interface ExtractedItem {
 
 export default function ImageUploadModal() {
   const { activeModal, openModal, closeModal, project, addTask, activateAgent, addActivity, addNotification, setOnboardingData } = useAppStore();
+  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -108,7 +110,11 @@ export default function ImageUploadModal() {
       }
     } catch (error) {
       console.error('AI Scan failed:', error);
-      alert('AI scan failed. Please try again.');
+      toast({
+        title: "Scan Failed",
+        description: "AI analysis failed. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsScanning(false);
     }

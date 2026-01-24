@@ -3,45 +3,94 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Sparkles, ArrowRight, ShieldCheck, Mail, Lock } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from "@/components/ui/use-toast";
 
 function LoginContent() {
   const { login } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const mode = searchParams.get('mode'); // 'admin' (signup) or 'member' (login)
   
   // State for Member Login (Invite Code)
   const [inviteCode, setInviteCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // State for Admin Signup/Login
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [isOwnerLoading, setIsOwnerLoading] = useState(false);
   
   const handleMemberLogin = async () => {
     if (!inviteCode) return;
     
-    const success = await login(inviteCode);
-    if (!success) {
-        alert('Authentication Failed: Invalid code or unregistered email.');
-        return;
+    setIsLoading(true);
+    try {
+        const success = await login(inviteCode);
+        if (!success) {
+            toast({
+                title: "Authentication Failed",
+                description: "Invalid code or unregistered email.",
+                variant: "destructive"
+            });
+            return;
+        }
+        router.push('/dashboard');
+    } catch (error) {
+        toast({
+            title: "Error",
+            description: "An unexpected error occurred during login.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsLoading(false);
     }
-    router.push('/dashboard');
   };
 
-  const handleAdminSignup = () => {
+  const handleAdminSignup = async () => {
     if (!adminEmail) {
-        alert('Please provide your email address to initialize your environment.');
+        toast({
+            title: "Validation Error",
+            description: "Please provide your email address to initialize your environment.",
+            variant: "destructive"
+        });
         return;
     }
-    // Simple state persistence for onboarding
-    localStorage.setItem('octoops_owner_email', adminEmail);
-    localStorage.setItem('octoops_owner_name', adminName || 'Sarah Chen');
+
+    setIsOwnerLoading(true);
     
-    // Redirect to Onboarding Wizard to complete setup
-    router.push('/onboarding');
+    try {
+        // Check if owner already exists by attempting login
+        const { auth } = await import('@/lib/api');
+        // We use the same login endpoint; if it returns user, they exist
+        const response = await auth.login(adminEmail).catch(() => null);
+        
+        if (response?.data?.user) {
+            // User exists - Log them in directly
+            await login(adminEmail);
+            toast({
+                title: "Welcome Back",
+                description: "Recovering your command center...",
+            });
+            router.push('/dashboard');
+        } else {
+            // User does not exist - Go to Onboarding (Signup)
+            // Simple state persistence for onboarding
+            localStorage.setItem('octoops_owner_email', adminEmail);
+            localStorage.setItem('octoops_owner_name', adminName || 'Project Owner');
+            
+            router.push('/onboarding');
+        }
+    } catch (e) {
+        // Fallback to onboarding if check fails strangely, or error out
+        console.error("Owner check failed", e);
+        router.push('/onboarding');
+    } finally {
+        setIsOwnerLoading(false);
+    }
   };
 
   // Determine view based on URL param
@@ -106,12 +155,22 @@ function LoginContent() {
                   You will be redirected to the Onboarding Wizard to set up your project vision, timeline, and invite your team.
                </div>
 
-               <Button 
-                onClick={handleAdminSignup}
-                className="w-full h-14 bg-[#00F0FF] text-[#0A0E27] hover:bg-[#00F0FF]/90 font-bold font-display text-lg rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all hover:scale-[1.02]"
+                <Button 
+                 onClick={handleAdminSignup}
+                 disabled={isOwnerLoading}
+                 className="w-full h-14 bg-[#00F0FF] text-[#0A0E27] hover:bg-[#00F0FF]/90 font-bold font-display text-lg rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all hover:scale-[1.02]"
                >
-                 Create Free Account
-                 <ArrowRight className="w-5 h-5 ml-2" />
+                 {isOwnerLoading ? (
+                    <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Initializing...
+                    </>
+                 ) : (
+                    <>
+                        Create Free Account
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                 )}
                </Button>
                
                <div className="text-center">
@@ -141,10 +200,20 @@ function LoginContent() {
                
                <Button 
                 onClick={handleMemberLogin}
+                disabled={isLoading}
                 className="w-full h-14 bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold font-display text-lg rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.3)] transition-all hover:scale-[1.02]"
                >
-                 Access Environment
-                 <ArrowRight className="w-5 h-5 ml-2" />
+                 {isLoading ? (
+                    <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Verifying Access...
+                    </>
+                 ) : (
+                    <>
+                        Access Environment
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                 )}
                </Button>
 
                <div className="text-center pt-2">

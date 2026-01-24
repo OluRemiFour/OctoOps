@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAppStore } from '@/lib/store';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { risks as risksApi } from '@/lib/api';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function AddRiskModal() {
   const { activeModal, closeModal, project, fetchRisks, addActivity, activateAgent } = useAppStore();
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState('medium');
@@ -42,11 +44,19 @@ export default function AddRiskModal() {
       
       activateAgent('Risk', 2000);
       await fetchRisks();
+      toast({
+        title: "Risk Logged",
+        description: "New risk has been recorded.",
+      });
       resetForm();
       closeModal();
     } catch (error) {
       console.error('Failed to add risk:', error);
-      alert('Failed to add risk. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to add risk. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }

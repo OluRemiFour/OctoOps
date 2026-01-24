@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { settings as settingsApi, projects as projectsApi } from '@/lib/api';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function SettingsPage() {
   const { project, openModal, isHydrated } = useAppStore();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -63,6 +65,11 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load settings.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -78,10 +85,17 @@ export default function SettingsPage() {
         deadline: projectDeadline,
         totalMilestones,
       });
-      alert('Project settings saved successfully!');
+      toast({
+        title: "Settings Saved",
+        description: "Project settings updated successfully.",
+      });
     } catch (error) {
       console.error('Failed to save project settings:', error);
-      alert('Failed to save settings');
+      toast({
+        title: "Error",
+        description: "Failed to save project settings.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
@@ -91,10 +105,17 @@ export default function SettingsPage() {
     try {
       setSaving(true);
       await settingsApi.updateNotifications(project!._id!, notifications);
-      alert('Notification settings saved!');
+      toast({
+        title: "Notifications Updated",
+        description: "Notification preferences saved.",
+      });
     } catch (error) {
       console.error('Failed to save notifications:', error);
-      alert('Failed to save settings');
+      toast({
+        title: "Error",
+        description: "Failed to save notification settings.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
@@ -104,10 +125,17 @@ export default function SettingsPage() {
     try {
       setSaving(true);
       await settingsApi.updateIntegrations(project!._id!, integrations);
-      alert('Integration settings saved!');
+      toast({
+        title: "Integrations Saved",
+        description: "Integration settings updated.",
+      });
     } catch (error) {
       console.error('Failed to save integrations:', error);
-      alert('Failed to save settings');
+      toast({
+        title: "Error",
+        description: "Failed to save integrations.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
@@ -117,10 +145,17 @@ export default function SettingsPage() {
     try {
       setSaving(true);
       await settingsApi.updateAI(project!._id!, aiSettings);
-      alert('AI settings saved!');
+      toast({
+        title: "AI Settings Saved",
+        description: "AI preferences updated.",
+      });
     } catch (error) {
       console.error('Failed to save AI settings:', error);
-      alert('Failed to save settings');
+      toast({
+        title: "Error",
+        description: "Failed to save AI settings.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
@@ -134,11 +169,18 @@ export default function SettingsPage() {
       // Fallback to project ID from store if _id is missing
       const idToDelete = project!._id || project!.id;
       await projectsApi.update({ projectId: idToDelete, status: 'deleted' }); // Soft delete
-      alert('Project archived successfully');
+      toast({
+        title: "Project Archived",
+        description: "Project has been successfully archived.",
+      });
       window.location.href = '/dashboard';
     } catch (error) {
       console.error('Failed to delete project:', error);
-      alert('Failed to delete project');
+      toast({
+        title: "Error",
+        description: "Failed to delete project.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }

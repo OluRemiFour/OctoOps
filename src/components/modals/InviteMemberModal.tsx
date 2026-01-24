@@ -10,6 +10,7 @@ import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { team as teamApi } from '@/lib/api';
 import { UserPlus, MessageSquare } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 const roles = [
   'Project Lead',
@@ -29,6 +30,7 @@ const avatars = ['👨‍💻', '👩‍💻', '👨‍🎨', '👩‍🎨', '�
 
 export default function InviteMemberModal() {
   const { activeModal, closeModal, addTeamMember, activateAgent, addNotification } = useAppStore();
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -52,7 +54,7 @@ export default function InviteMemberModal() {
             email,
             role,
             projectId: useAppStore.getState().project?._id,
-            invitedBy: authUser?.id || 'u1',
+            invitedBy: authUser?.id || '507f1f77bcf86cd799439011',
             name // Passing name too if supported
         });
 
@@ -65,9 +67,17 @@ export default function InviteMemberModal() {
         });
         
         await useAppStore.getState().fetchTeam();
+        toast({
+            title: "Invitation Sent",
+            description: `Invitation sent to ${name} (${email})`,
+        });
     } catch (err) {
         console.error("Failed to send invite:", err);
-        alert("System error: Could not transmit invitation data.");
+        toast({
+            title: "Error",
+            description: "System error: Could not transmit invitation data.",
+            variant: "destructive"
+        });
     }
     setIsSubmitting(false);
     resetForm();

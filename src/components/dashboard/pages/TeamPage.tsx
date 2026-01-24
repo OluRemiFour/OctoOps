@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-import { Plus, Mail, UserMinus, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Mail, UserMinus, Shield, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { team as teamApi } from '@/lib/api';
+import { useToast } from "@/components/ui/use-toast";
 
 interface TeamMember {
   _id: string;
@@ -30,10 +31,13 @@ interface PendingInvite {
 
 export default function TeamPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { project, openModal, isHydrated } = useAppStore();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (project?._id) {
@@ -51,28 +55,58 @@ export default function TeamPage() {
       setPendingInvites(res.data.pendingInvites || []);
     } catch (error) {
       console.error('Failed to fetch team:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load team data.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
+    // Keep confirm as a safety check, but toast for result
     if (!confirm('Are you sure you want to remove this team member?')) return;
     
+    setRemovingId(memberId);
     try {
       await teamApi.removeMember(memberId, project!._id as string);
       await fetchTeamData();
+      toast({
+        title: "Member Removed",
+        description: "Team member has been successfully removed.",
+      });
     } catch (error) {
       console.error('Failed to remove member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove team member.",
+        variant: "destructive"
+      });
+    } finally {
+      setRemovingId(null);
     }
   };
 
   const handleCancelInvite = async (inviteId: string) => {
+    setCancelingId(inviteId);
     try {
       await teamApi.cancelInvite(inviteId);
       await fetchTeamData();
+      toast({
+        title: "Invite Canceled",
+        description: "Invitation has been revoked.",
+      });
     } catch (error) {
       console.error('Failed to cancel invite:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel invitation.",
+        variant: "destructive"
+      });
+    } finally {
+      setCancelingId(null);
     }
   };
 
@@ -192,7 +226,7 @@ export default function TeamPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => alert(`Resending specialized onboarding briefing to ${member.name}...`)}
+                      onClick={() => toast({ title: "Briefing Sent", description: `Re-sent onboarding materials to ${member.name}.` })}
                       className="text-[#00FF88] hover:bg-[#00FF88]/10 text-[10px] font-bold h-7"
                     >
                       Invite
@@ -202,9 +236,10 @@ export default function TeamPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleRemoveMember(member._id)}
+                        disabled={removingId === member._id}
                         className="text-[#FF3366] hover:bg-[#FF3366]/10 h-7"
                         >
-                        <UserMinus className="w-4 h-4" />
+                        {removingId === member._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserMinus className="w-4 h-4" />}
                         </Button>
                     )}
                   </div>
@@ -248,10 +283,11 @@ export default function TeamPage() {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleCancelInvite(invite._id)}
+                      disabled={cancelingId === invite._id}
                       className="text-[#FF3366] hover:bg-[#FF3366]/10"
                     >
-                      <XCircle className="w-4 h-4 mr-1" />
-                      Cancel
+                      {cancelingId === invite._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                      {cancelingId !== invite._id && 'Cancel'}
                     </Button>
                   )}
                 </div>
