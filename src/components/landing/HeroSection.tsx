@@ -15,7 +15,7 @@ export default function HeroSection() {
   const { setOnboardingData } = useAppStore();
 
   const handleStartProject = () => {
-    setOnboardingData({ name: '', vision: '' }); // Initialize
+    setOnboardingData({ name: '', vision: '' });
     router.push('/login?mode=admin');
   };
 
@@ -89,7 +89,7 @@ export default function HeroSection() {
             <div className="flex flex-wrap gap-4">
               <a 
                 href="/login?mode=admin"
-                className="inline-flex items-center justify-center bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0A0E27] font-display font-bold text-lg px-8 py-6 rounded-2xl glow-cyan transition-all duration-200 hover:scale-105"
+                className="inline-flex items-center justify-center bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0A0E27] font-display font-bold text-lg px-6 py-4 rounded-2xl glow-cyan transition-all duration-200 hover:scale-105"
               >
                 Start Project
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -97,7 +97,7 @@ export default function HeroSection() {
               
               <a 
                 href="/login?mode=member"
-                className="inline-flex items-center justify-center glass border-[#00F0FF]/30 hover:border-[#00F0FF]/60 text-[#E8F0FF] font-display font-bold text-lg px-8 py-6 rounded-2xl transition-all duration-200 hover:scale-105"
+                className="inline-flex items-center justify-center glass border-[#00F0FF]/30 hover:border-[#00F0FF]/60 text-[#E8F0FF] font-display font-bold text-lg px-6 py-4 rounded-2xl transition-all duration-200 hover:scale-105"
               >
                 <div className="flex items-center">
                     <span className="w-2 h-2 rounded-full bg-[#00FF88] mr-3 animate-pulse"></span>
