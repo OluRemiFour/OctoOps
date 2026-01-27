@@ -100,7 +100,7 @@ export default function EditTaskModal() {
               <label className="text-sm font-bold text-[#9D4EDD] uppercase tracking-wider font-mono">Status</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => setStatus(e.target.value as 'todo' | 'in-progress' | 'in-review' | 'done' | 'blocked')}
                 className="w-full glass border border-white/10 rounded-xl px-4 py-2 text-[#E8F0FF] bg-transparent"
               >
                 <option value="todo">To Do</option>

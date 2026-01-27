@@ -397,16 +397,14 @@ export default function OnboardingWizard() {
             ) : (
                   <Button 
                      onClick={handleComplete} 
-                     disabled={!hasQA || isCompleting || project?.status === 'in-review'}
-                     className={`bg-[#00FF88] text-[#0A0E27] font-bold h-12 px-8 min-w-[200px] glow-green disabled:opacity-50 ${project?.status === 'in-review' ? 'cursor-not-allowed' : ''}`}
+                     disabled={!hasQA || isCompleting}
+                     className="bg-[#00FF88] text-[#0A0E27] font-bold h-12 px-8 min-w-[200px] glow-green disabled:opacity-50"
                   >
                      {isCompleting ? (
                          <>
                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                              Initializing Network...
                          </>
-                     ) : project?.status === 'in-review' ? (
-                        "Project In Review"
                      ) : (
                          "Launch OctoOps"
                      )}
