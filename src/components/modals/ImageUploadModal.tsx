@@ -311,13 +311,23 @@ export default function ImageUploadModal() {
                   )}
                 </div>
                 
-                {!isScanning && extractedItems.length === 0 && (
+                {extractedItems.length === 0 && (
                   <Button
                     onClick={startScan}
-                    className="w-full bg-[#FFB800] hover:bg-[#FFB800]/90 text-[#0A0E27] font-display font-bold rounded-xl glow-amber"
+                    disabled={isScanning}
+                    className="w-full bg-[#FFB800] hover:bg-[#FFB800]/90 text-[#0A0E27] font-display font-bold rounded-xl glow-amber disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Scan className="w-4 h-4 mr-2" />
-                    Start AI Scan
+                    {isScanning ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Scanning...
+                      </>
+                    ) : (
+                      <>
+                        <Scan className="w-4 h-4 mr-2" />
+                        Start AI Scan
+                      </>
+                    )}
                   </Button>
                 )}
 
