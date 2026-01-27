@@ -20,31 +20,92 @@ import TeamPage from './pages/TeamPage';
 import SettingsPage from './pages/SettingsPage';
 
 import DashboardNavbar from './DashboardNavbar';
+import { socket } from '@/lib/socket';
 
 export default function Dashboard() {
-  const { openModal, notifications, agentStates, fetchProject, fetchTasks, fetchTeam, fetchRisks, isHydrated } = useAppStore();
-  const { user, isAuthenticated } = useAuth();
+  const { openModal, notifications, agentStates, project, fetchProject, fetchTasks, fetchTeam, fetchRisks, isHydrated } = useAppStore();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
 
+  // URL Hash state persistence
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchProject();
+    if (typeof window !== 'undefined') {
+       const hash = window.location.hash.replace('#', '');
+       if (hash && ['overview', 'tasks', 'risks', 'team', 'settings'].includes(hash)) {
+         setActiveTab(hash);
+       }
     }
-  }, [isAuthenticated]);
+  }, []);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    window.location.hash = tab;
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && project?._id) {
+      fetchProject();
+      
+      // Real-time synchronization
+      socket.emit('join-project', project._id);
+      
+      socket.on('tasks-updated', (data) => {
+        if (data.projectId === project._id) {
+           fetchTasks();
+        }
+      });
+
+      socket.on('team-updated', (data) => {
+          if (data.projectId === project._id) {
+              fetchTeam();
+          }
+      });
+
+      socket.on('risks-updated', (data) => {
+          if (data.projectId === project._id) {
+              fetchRisks();
+              fetchProject(); // autoRisks are inside Project
+          }
+      });
+
+      socket.on('project-updated', (data) => {
+          if (data.projectId === project._id) {
+              fetchProject();
+          }
+      });
+
+      return () => {
+          socket.emit('leave-project', project._id);
+          socket.off('tasks-updated');
+          socket.off('team-updated');
+          socket.off('risks-updated');
+          socket.off('project-updated');
+      };
+    } else if (isAuthenticated) {
+        fetchProject();
+    }
+  }, [isAuthenticated, project?._id]);
 
   // Protect Dashboard
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
   
-  if (!isAuthenticated) return null; // Prevent flash
+  if (isLoading || !isAuthenticated) return (
+      <div className="fixed inset-0 bg-[#0A0E27] flex items-center justify-center z-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#00F0FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#8B9DC3] font-mono">{isLoading ? 'Authenticating...' : 'Redirecting...'}</p>
+        </div>
+      </div>
+  );
 
   if (!isHydrated) {
     return (
-      <div className="min-h-screen bg-[#0A0E27] flex items-center justify-center">
+      <div className="fixed inset-0 bg-[#0A0E27] flex items-center justify-center z-50">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#00F0FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-[#8B9DC3] font-mono">Initializing OctoOps Pulse...</p>
@@ -57,7 +118,7 @@ export default function Dashboard() {
   if (user?.role === 'member') {
     return (
         <div className="min-h-screen bg-[#0A0E27] text-[#E8F0FF] font-mono noise-overlay pt-24">
-             <DashboardNavbar activeTab={activeTab} onTabChange={setActiveTab} />
+             <DashboardNavbar activeTab={activeTab} onTabChange={handleTabChange} />
              <div className="max-w-7xl mx-auto px-6">
                 {activeTab === 'overview' && <MemberDashboard />}
                 {activeTab === 'tasks' && <TasksPage />}
@@ -73,7 +134,7 @@ export default function Dashboard() {
   if (user?.role === 'qa') {
     return (
         <div className="min-h-screen bg-[#0A0E27] text-[#E8F0FF] font-mono noise-overlay pt-24">
-             <DashboardNavbar activeTab={activeTab} onTabChange={setActiveTab} />
+             <DashboardNavbar activeTab={activeTab} onTabChange={handleTabChange} />
              <div className="max-w-7xl mx-auto px-6">
                 {activeTab === 'overview' && <QADashboard />}
                 {activeTab === 'tasks' && <TasksPage />}
@@ -92,7 +153,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#0A0E27] text-[#E8F0FF] font-mono noise-overlay p-4 md:p-6 mt-20 overflow-x-hidden">
-      <DashboardNavbar activeTab={activeTab} onTabChange={setActiveTab} />
+      <DashboardNavbar activeTab={activeTab} onTabChange={handleTabChange} />
       <div className="max-w-[1920px] mx-auto space-y-6 pt-6">
         {/* Header - Simplified for Owner Command Center since Nav has title */}
         <div className="flex items-center justify-between">
@@ -111,7 +172,7 @@ export default function Dashboard() {
         {/* Main Content Area */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)] lg:h-[600px]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)] lg:h-[800px]">
               {/* Right Column: Context & Activity */}
               <div className="flex flex-col gap-6 h-full overflow-y-auto pr-2 custom-scrollbar">
                 <ProjectContextPanel />
@@ -131,7 +192,7 @@ export default function Dashboard() {
             </div>
 
             {/* Bottom Row: Timeline */}
-            <div className="w-full">
+            <div className="w-full h-[230px] overflow-hidden">
               <TimelineHorizon />
             </div>
           </>

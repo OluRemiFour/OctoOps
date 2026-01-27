@@ -1,14 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppStore, Task } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-import { CheckCircle, Clock, AlertTriangle, ArrowRight, ShieldCheck, PlayCircle } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, ArrowRight, ShieldCheck, PlayCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import CountdownTimer from './CountdownTimer';
 
 export default function TeamTaskBoard() {
   const { user } = useAuth();
   const { tasks, updateTask, submitForReview, approveTask } = useAppStore();
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+
+  const handleAction = async (taskId: string, action: () => Promise<void>) => {
+    if (!taskId) return;
+    setLoadingTaskId(taskId);
+    try {
+        await action();
+    } finally {
+        setLoadingTaskId(null);
+    }
+  };
 
   if (!user) return null;
 
@@ -49,7 +61,7 @@ export default function TeamTaskBoard() {
         ) : (
           myTasks.map((task) => (
             <div
-              key={task.id}
+              key={task._id || task.id}
               className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#00F0FF]/30 transition-all group"
             >
               <div className="flex items-start justify-between gap-4">
@@ -66,10 +78,19 @@ export default function TeamTaskBoard() {
                     >
                         {task.status.replace('-', ' ')}
                     </span>
+                    <CountdownTimer deadline={task.deadline} status={task.status} />
                     <span className="font-mono text-xs text-[#8B9DC3] flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {task.deadline}
                     </span>
                   </div>
+                  {/* COMPLETION NOTES / DESCRIPTION for QA */}
+                  {task.description && (
+                    <div className="mb-3 p-3 rounded-lg bg-[#0A0E27]/50 border border-white/5 text-xs text-[#8B9DC3] font-mono whitespace-pre-wrap">
+                        {task.description.length > 150 && user.role === 'member' 
+                            ? task.description.substring(0, 150) + "..." 
+                            : task.description}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Actions based on Role and Status */}
@@ -78,20 +99,22 @@ export default function TeamTaskBoard() {
                   {user.role === 'member' && task.status === 'todo' && (
                     <Button 
                         size="sm" 
+                        disabled={loadingTaskId === (task._id || task.id)}
                         className="bg-[#00F0FF]/20 text-[#00F0FF] hover:bg-[#00F0FF]/30 border border-[#00F0FF]/50"
-                        onClick={() => updateTask(task.id, { status: 'in-progress' })}
+                        onClick={() => handleAction(task._id || task.id, () => updateTask(task._id || task.id, { status: 'in-progress' }))}
                     >
-                        <PlayCircle className="w-4 h-4 mr-1" /> Start
+                        {loadingTaskId === (task._id || task.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <><PlayCircle className="w-4 h-4 mr-1" /> Start</>}
                     </Button>
                   )}
                   
                   {user.role === 'member' && task.status === 'in-progress' && (
                     <Button 
                         size="sm" 
+                        disabled={loadingTaskId === (task._id || task.id)}
                         className="bg-[#FFB800]/20 text-[#FFB800] hover:bg-[#FFB800]/30 border border-[#FFB800]/50"
-                        onClick={() => submitForReview(task.id)}
+                        onClick={() => handleAction(task._id || task.id, () => submitForReview(task._id || task.id))}
                     >
-                        Submit <ArrowRight className="w-4 h-4 ml-1" />
+                        {loadingTaskId === (task._id || task.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit <ArrowRight className="w-4 h-4 ml-1" /></>}
                     </Button>
                   )}
 
@@ -100,18 +123,20 @@ export default function TeamTaskBoard() {
                     <div className="flex gap-2">
                         <Button 
                             size="sm" 
+                            disabled={loadingTaskId === (task._id || task.id)}
                             className="bg-[#00FF88]/20 text-[#00FF88] hover:bg-[#00FF88]/30 border border-[#00FF88]/50"
-                            onClick={() => approveTask(task.id)}
+                            onClick={() => handleAction(task._id || task.id, () => approveTask(task._id || task.id))}
                         >
-                            <ShieldCheck className="w-4 h-4 mr-1" /> Approve
+                            {loadingTaskId === (task._id || task.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldCheck className="w-4 h-4 mr-1" /> Approve</>}
                         </Button>
                         <Button 
                             size="sm" 
                             variant="destructive"
+                            disabled={loadingTaskId === (task._id || task.id)}
                             className="bg-[#FF3366]/20 text-[#FF3366] hover:bg-[#FF3366]/30 border border-[#FF3366]/50"
-                            onClick={() => updateTask(task.id, { status: 'in-progress' })} // Send back
+                            onClick={() => handleAction(task._id || task.id, () => updateTask(task._id || task.id, { status: 'in-progress' }))}
                         >
-                            Reject
+                            {loadingTaskId === (task._id || task.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reject'}
                         </Button>
                     </div>
                   )}
@@ -121,10 +146,11 @@ export default function TeamTaskBoard() {
                      <Button
                         size="sm"
                         variant="ghost" 
+                        disabled={loadingTaskId === (task._id || task.id)}
                         className="text-[#8B9DC3] hover:text-[#FF3366] hover:bg-[#FF3366]/10"
-                        onClick={() => updateTask(task.id, { status: 'blocked' })}
+                        onClick={() => handleAction(task._id || task.id, () => updateTask(task._id || task.id, { status: 'blocked' }))}
                      >
-                        <AlertTriangle className="w-4 h-4" />
+                        {loadingTaskId === (task._id || task.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
                      </Button>
                    )}
                 </div>

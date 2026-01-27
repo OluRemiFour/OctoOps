@@ -6,13 +6,26 @@ import { useAuth } from '@/lib/auth-context';
 import { Plus, Search, Filter, Calendar, User, Flag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import CountdownTimer from '../CountdownTimer';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function TasksPage() {
   const { user } = useAuth();
-  const { tasks, openModal, updateTask, deleteTask: removeTask, isHydrated, project } = useAppStore();
+  const { tasks, openModal, updateTask, deleteTask: removeTask, isHydrated, project, fetchTasks } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+
+  const handleAction = async (taskId: string, updates: any) => {
+    setLoadingTaskId(taskId);
+    try {
+        await updateTask(taskId, updates);
+        await fetchTasks();
+    } finally {
+        setLoadingTaskId(null);
+    }
+  };
 
   // Filter tasks
   const filteredTasks = tasks.filter(task => {
@@ -96,7 +109,7 @@ export default function TasksPage() {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 glass border-white/10"
+              className="pl-10 border-white/10"
             />
           </div>
 
@@ -104,7 +117,7 @@ export default function TasksPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="glass border border-white/10 rounded-xl px-4 py-2 text-[#E8F0FF] bg-transparent"
+            className="border border-white/10 rounded-xl px-4 py-2 text-[#E8F0FF] bg-[#0A0E27]"
           >
             <option value="all">All Statuses</option>
             <option value="todo">To Do</option>
@@ -118,7 +131,7 @@ export default function TasksPage() {
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value)}
-            className="glass border border-white/10 rounded-xl px-4 py-2 text-[#E8F0FF] bg-transparent"
+            className="border border-white/10 rounded-xl px-4 py-2 text-[#E8F0FF] bg-[#0A0E27]"
           >
             <option value="all">All Priorities</option>
             <option value="critical">Critical</option>
@@ -130,22 +143,30 @@ export default function TasksPage() {
       </div>
 
       {/* Task Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[
-          { label: 'Total', count: tasks.length, color: '#E8F0FF' },
-          { label: 'To Do', count: tasks.filter(t => t.status === 'todo').length, color: '#8B9DC3' },
-          { label: 'In Progress', count: tasks.filter(t => t.status === 'in-progress').length, color: '#00F0FF' },
-          { label: 'In Review', count: tasks.filter(t => t.status === 'in-review').length, color: '#FFB800' },
-          { label: 'Done', count: tasks.filter(t => t.status === 'done').length, color: '#00FF88' },
-        ].map((stat, idx) => (
-          <div key={idx} className="glass rounded-xl p-4 text-center">
-            <div className="font-display text-2xl font-bold" style={{ color: stat.color }}>
-              {stat.count}
+      {(() => {
+        const statsTasks = user?.role === 'owner' 
+            ? tasks 
+            : tasks.filter(t => t.assignee === user?.id || t.assignee === (user as any)._id || t.assignee === user?.name || t.assigneeEmail === user?.email);
+
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                { label: 'Total', count: statsTasks.length, color: '#E8F0FF' },
+                { label: 'To Do', count: statsTasks.filter(t => t.status === 'todo').length, color: '#8B9DC3' },
+                { label: 'In Progress', count: statsTasks.filter(t => t.status === 'in-progress').length, color: '#00F0FF' },
+                { label: 'In Review', count: statsTasks.filter(t => t.status === 'in-review').length, color: '#FFB800' },
+                { label: 'Done', count: statsTasks.filter(t => t.status === 'done').length, color: '#00FF88' },
+                ].map((stat) => (
+                <div key={stat.label} className="glass rounded-xl p-4 text-center">
+                    <div className="font-display text-2xl font-bold" style={{ color: stat.color }}>
+                    {stat.count}
+                    </div>
+                    <div className="font-mono text-xs text-[#8B9DC3] mt-1">{stat.label}</div>
+                </div>
+                ))}
             </div>
-            <div className="font-mono text-xs text-[#8B9DC3] mt-1">{stat.label}</div>
-          </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* Tasks List */}
       <div className="space-y-3">
@@ -164,18 +185,24 @@ export default function TasksPage() {
         ) : (
           filteredTasks.map((task) => (
             <div
-              key={task.id}
+              key={task._id || task.id}
               className="glass rounded-xl p-4 hover:border-[#00F0FF]/30 transition-all group"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-display text-lg font-bold text-[#E8F0FF]">
+                      {task.assigneeName && (
+                        <span className="text-[#00F0FF] mr-2">
+                          @{task.assigneeName.split(' ')[0]}:
+                        </span>
+                      )}
                       {task.title}
                     </h3>
                     <span className={`text-xs px-2 py-1 rounded-full border font-bold ${getStatusColor(task.status)}`}>
                       {task.status.replace('-', ' ').toUpperCase()}
                     </span>
+                    <CountdownTimer deadline={task.deadline} status={task.status} timerStartedAt={task.timerStartedAt} />
                     <Flag className={`w-4 h-4 ${getPriorityColor(task.priority || 'medium')}`} />
                   </div>
 
@@ -190,35 +217,69 @@ export default function TasksPage() {
                         {task.assigneeName}
                       </div>
                     )}
-                    {task.deadline && (
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(task.deadline).toLocaleDateString()}
+                        {formatDate(task.deadline)}
                       </div>
-                    )}
                   </div>
                 </div>
 
-                {user?.role === 'owner' && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openModal('edit-task', task)}
-                      className="text-[#00F0FF] hover:bg-[#00F0FF]/10"
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => removeTask(task.id)}
-                      className="text-[#FF3366] hover:bg-[#FF3366]/10"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                <div className="flex flex-col gap-2">
+                   {/* Workflow Buttons */}
+                   {task.status !== 'done' && (
+                      <>
+                        {/* Member Action: Submit for Review */}
+                        {(user?.role === 'member' || user?.role === 'owner') && (task.status === 'todo' || task.status === 'in-progress') && (
+                          <Button 
+                            size="sm"
+                            disabled={loadingTaskId === (task._id || task.id)}
+                            className="bg-[#00F0FF]/20 text-[#00F0FF] hover:bg-[#00F0FF]/30 border border-[#00F0FF]/30"
+                            onClick={() => handleAction(task._id || task.id, { status: 'in-review' })}
+                          >
+                            {loadingTaskId === (task._id || task.id) ? 'Syncing...' : 'Mark Complete'}
+                          </Button>
+                        )}
+
+                        {/* QA/Owner Action: Approve */}
+                        {(user?.role === 'qa' || user?.role === 'owner') && task.status === 'in-review' && (
+                          <Button 
+                            size="sm"
+                            disabled={loadingTaskId === (task._id || task.id)}
+                            className="bg-[#00FF88]/20 text-[#00FF88] hover:bg-[#00FF88]/30 border border-[#00FF88]/30"
+                            onClick={() => handleAction(task._id || task.id, { 
+                                status: 'done',
+                                reviewedBy: user?.id || (user as any)?._id
+                            })}
+                          >
+                            {loadingTaskId === (task._id || task.id) ? 'Finalizing...' : 'Approve & Close'}
+                          </Button>
+                        )}
+                      </>
+                   )}
+
+                  <div className="flex gap-2 justify-end">
+                    {user?.role === 'owner' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openModal('edit-task', task)}
+                          className="text-[#00F0FF] hover:bg-[#00F0FF]/10 h-8"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeTask(task._id || task.id)}
+                          className="text-[#FF3366] hover:bg-[#FF3366]/10 h-8"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ))

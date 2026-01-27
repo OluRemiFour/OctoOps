@@ -10,7 +10,11 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/lib/auth-context";
+import { SocketProvider } from "@/lib/socket-context";
 import ModalProvider from "@/components/modals/ModalProvider";
+// AI Refinement Layer
+
+import { Toaster } from "@/components/ui/toaster";
 
 export default function RootLayout({
   children,
@@ -21,8 +25,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
-          <ModalProvider />
-          {children}
+          <SocketProvider>
+            <ModalProvider />
+            {children}
+            <Toaster />
+          </SocketProvider>
         </AuthProvider>
       </body>
     </html>

@@ -11,9 +11,15 @@ export default function RisksPage() {
   const { risks, openModal, resolveRisk: markResolved, isHydrated, project } = useAppStore();
   const [filter, setFilter] = useState<'all' | 'active' | 'resolved'>('active');
 
-  const filteredRisks = risks.filter(risk => {
+  const allRisks = React.useMemo(() => {
+    const manualRisks = risks || [];
+    const aiRisks = (project as any)?.autoRisks || [];
+    return [...aiRisks, ...manualRisks];
+  }, [risks, project]);
+
+  const filteredRisks = allRisks.filter(risk => {
     if (filter === 'active') return !risk.resolved;
-    if (filter === 'resolved') return risk.resolved;
+    if (filter === 'resolved') return !!risk.resolved;
     return true;
   });
 
@@ -26,7 +32,7 @@ export default function RisksPage() {
     }
   };
 
-  const activeRisks = risks.filter(r => !r.resolved);
+  const activeRisks = allRisks.filter(r => !r.resolved);
   const criticalCount = activeRisks.filter(r => r.severity === 'critical').length;
   const highCount = activeRisks.filter(r => r.severity === 'high').length;
 
@@ -85,7 +91,7 @@ export default function RisksPage() {
         </div>
         <div className="glass rounded-xl p-4 text-center">
           <div className="font-display text-2xl font-bold text-[#00FF88]">
-            {risks.filter(r => r.resolved).length}
+            {allRisks.filter(r => r.resolved).length}
           </div>
           <div className="font-mono text-xs text-[#8B9DC3] mt-1">Resolved</div>
         </div>
@@ -165,7 +171,7 @@ export default function RisksPage() {
                       <div className="mb-4">
                         <div className="text-xs font-bold text-[#8B9DC3] mb-2">RECOMMENDATIONS</div>
                         <ul className="space-y-1">
-                          {risk.recommendations.map((rec, idx) => (
+                          {risk.recommendations.map((rec: string, idx: number) => (
                             <li key={idx} className="text-sm text-[#00F0FF] flex items-start gap-2">
                               <span className="text-[#00F0FF] mt-1">•</span>
                               <span>{rec}</span>

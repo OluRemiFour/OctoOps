@@ -17,9 +17,9 @@ export default function DashboardNavbar({ activeTab, onTabChange }: DashboardNav
   const navItems = [
     { icon: LayoutDashboard, label: 'Overview', roles: ['owner', 'member', 'qa'] },
     { icon: CheckSquare, label: 'Tasks', roles: ['owner', 'member', 'qa'] },
-    { icon: AlertTriangle, label: 'Risks', roles: ['owner'] }, // Owner only
-    { icon: Users, label: 'Team', roles: ['owner', 'qa'] }, // Owner/QA only
-    { icon: Settings, label: 'Settings', roles: ['owner'] }, // Owner only
+    { icon: AlertTriangle, label: 'Risks', roles: ['owner'] }, 
+    { icon: Users, label: 'Team', roles: ['owner', 'qa'] }, 
+    { icon: Settings, label: 'Settings', roles: ['owner'] }, 
   ];
 
   return (
@@ -45,7 +45,7 @@ export default function DashboardNavbar({ activeTab, onTabChange }: DashboardNav
                 <Button
                     key={item.label}
                     variant={isActive ? "secondary" : "ghost"}
-                    onClick={() => onTabChange ? onTabChange(item.label.toLowerCase()) : alert(`Navigating to ${item.label}... (Feature coming soon)`)}
+                    onClick={() => onTabChange?.(item.label.toLowerCase())}
                     className={`gap-2 ${isActive ? 'bg-[#00F0FF]/20 text-[#00F0FF]' : 'text-[#8B9DC3] hover:text-[#00F0FF] hover:bg-white/5'}`}
                 >
                     <item.icon className="w-4 h-4" />

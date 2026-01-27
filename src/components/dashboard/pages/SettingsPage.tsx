@@ -10,7 +10,7 @@ import { settings as settingsApi, projects as projectsApi } from '@/lib/api';
 import { useToast } from "@/components/ui/use-toast";
 
 export default function SettingsPage() {
-  const { project, openModal, isHydrated } = useAppStore();
+  const { project, openModal, isHydrated, updateProject, fetchProject } = useAppStore();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,13 +78,13 @@ export default function SettingsPage() {
   const handleSaveProject = async () => {
     try {
       setSaving(true);
-      await settingsApi.update({
-        projectId: project!._id!,
+      await updateProject({
         name: projectName,
         description: projectDescription,
         deadline: projectDeadline,
         totalMilestones,
       });
+      
       toast({
         title: "Settings Saved",
         description: "Project settings updated successfully.",
@@ -161,29 +161,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteProject = async () => {
-    if (!confirm('This will permanently delete the project and all associated tasks, risks, and settings. Are you sure?')) return;
-    
-    try {
-      setSaving(true);
-      // Fallback to project ID from store if _id is missing
-      const idToDelete = project!._id || project!.id;
-      await projectsApi.update({ projectId: idToDelete, status: 'deleted' }); // Soft delete
-      toast({
-        title: "Project Archived",
-        description: "Project has been successfully archived.",
-      });
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Failed to delete project:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete project.",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
+  const handleDeleteProject = () => {
+    openModal('archive-confirm');
   };
 
   if (loading || !isHydrated) {

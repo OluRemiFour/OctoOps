@@ -109,7 +109,7 @@ export default function AddTaskModal() {
                 </SelectTrigger>
                 <SelectContent className="glass bg-[#0A0E27]/95 border-[#00F0FF]/30">
                   {team.map((member) => (
-                    <SelectItem key={member.id} value={member.name} className="font-mono text-[#E8F0FF] hover:bg-[#00F0FF]/10">
+                    <SelectItem key={member._id || member.id || member.email} value={member.name} className="font-mono text-[#E8F0FF] hover:bg-[#00F0FF]/10">
                       <span className="flex items-center gap-2">
                         <span>{member.avatar}</span>
                         {member.name}

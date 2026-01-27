@@ -4,6 +4,7 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap, CheckCircle, AlertTriangle, MessageSquare, Lightbulb } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { formatTime } from '@/lib/dateUtils';
 
 const agentIcons = {
   Planner: Zap,
@@ -76,7 +77,7 @@ export default function AgentActivityFeed() {
                         {activity.agent} Agent
                       </span>
                       <span className="font-mono text-xs text-[#8B9DC3] whitespace-nowrap">
-                        {activity.time}
+                        {activity.timestamp ? formatTime(activity.timestamp) : activity.time}
                       </span>
                     </div>
                     <p className="font-mono text-sm text-[#E8F0FF] leading-relaxed">

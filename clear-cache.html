@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear OctoOps Cache</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0A0E27;
+            color: #E8F0FF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        button {
+            background: #00FF88;
+            color: #0A0E27;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #00DD77;
+        }
+        .status {
+            margin-top: 20px;
+            color: #00F0FF;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐙 OctoOps Cache Cleaner</h1>
+        <p>Click below to clear all cached data and reset your session</p>
+        <button onclick="clearAll()">Clear All Cache & Reload</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        function clearAll() {
+            const status = document.getElementById('status');
+            
+            // Clear localStorage
+            localStorage.clear();
+            status.innerHTML = '✓ LocalStorage cleared<br>';
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            status.innerHTML += '✓ SessionStorage cleared<br>';
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            status.innerHTML += '✓ Cookies cleared<br>';
+            
+            status.innerHTML += '<br>Reloading in 2 seconds...';
+            
+            setTimeout(() => {
+                window.location.href = 'http://localhost:3000/login?mode=admin';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

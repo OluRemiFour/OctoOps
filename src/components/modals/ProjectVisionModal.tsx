@@ -70,10 +70,15 @@ export default function ProjectVisionModal() {
       // Map dynamic fields with fallbacks
       const milestones = data.keyMilestones || data.milestones || [];
       const team = data.teamRecommendations?.roles || data.teamRecommendations || data.roles || data.team || [];
-      const deadline = data.recommendedDeadline || data.deadline || '';
-
-      if (milestones.length === 0 && team.length === 0) {
-        console.warn('AI returned empty roadmap/team. Check mapping/response structure.');
+      let deadline = data.recommendedDeadline || data.deadline || '';
+      
+      // Validate deadline: If missing or in the past, default to +30 days
+      const dateObj = new Date(deadline);
+      const now = new Date();
+      if (!deadline || isNaN(dateObj.getTime()) || dateObj < now) {
+          const future = new Date();
+          future.setDate(future.getDate() + 30); // Default to 1 month sprint
+          deadline = future.toISOString().split('T')[0];
       }
 
       setRecommendations(data);

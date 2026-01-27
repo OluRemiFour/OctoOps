@@ -24,6 +24,7 @@ const roles = [
   'Content Creator',
   'Marketing Manager',
   'Technical Writer',
+  'Other',
 ];
 
 const avatars = ['👨‍💻', '👩‍💻', '👨‍🎨', '👩‍🎨', '🧑‍💼', '👨‍💼', '👩‍💼', '🧑‍🔧', '👨‍🔬', '👩‍🔬'];
@@ -36,6 +37,7 @@ export default function InviteMemberModal() {
   const [role, setRole] = useState('');
   const [avatar, setAvatar] = useState('👨‍💻');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user: authUser } = useAuth(); // Fixed: moved to top level
 
   const isOpen = activeModal === 'invite-member';
 
@@ -45,8 +47,6 @@ export default function InviteMemberModal() {
 
     setIsSubmitting(true);
     activateAgent('Communication', 2000);
-
-    const { user: authUser } = useAuth();
 
     // Real Invitation API call
     try {
@@ -71,6 +71,9 @@ export default function InviteMemberModal() {
             title: "Invitation Sent",
             description: `Invitation sent to ${name} (${email})`,
         });
+        // Refresh page
+        window.location.href = '/dashboard'
+
     } catch (err) {
         console.error("Failed to send invite:", err);
         toast({

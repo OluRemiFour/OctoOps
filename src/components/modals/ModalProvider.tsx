@@ -8,9 +8,14 @@ import ImageUploadModal from './ImageUploadModal';
 import ViewReportsModal from './ViewReportsModal';
 import NotificationCenter from './NotificationCenter';
 import ProjectVisionModal from './ProjectVisionModal';
-import TimelineDetailModal from './TimelineDetailModal';
 import AddRiskModal from './AddRiskModal';
 import AIRiskAnalysisModal from './AIRiskAnalysisModal';
+import RoadmapModal from './RoadmapModal';
+import TimelineDetailModal from './TimelineDetailModal';
+import ArchiveConfirmModal from './ArchiveConfirmModal';
+import EditTaskModal from './EditTaskModal';
+import EditRiskModal from './EditRiskModal';
+import CelebrationModal from './CelebrationModal';
 
 export default function ModalProvider() {
   return (
@@ -25,6 +30,11 @@ export default function ModalProvider() {
       <TimelineDetailModal />
       <AddRiskModal />
       <AIRiskAnalysisModal />
+      <RoadmapModal />
+      <ArchiveConfirmModal />
+      <EditTaskModal />
+      <EditRiskModal />
+      <CelebrationModal />
     </>
   );
 }

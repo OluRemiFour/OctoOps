@@ -4,6 +4,7 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { formatDate } from '@/lib/dateUtils';
 
 interface Milestone {
   id: string;
@@ -30,11 +31,11 @@ export default function TimelineHorizon() {
         
         // Find latest deadline for this milestone
         const deadlines = milestoneTasks.map(t => t.deadline).filter(Boolean);
-        const lastDeadline = deadlines.length > 0 ? new Date(Math.max(...deadlines.map(d => new Date(d).getTime()))).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pending';
+        const lastDeadline = deadlines.length > 0 ? formatDate(new Date(Math.max(...deadlines.map(d => new Date(d as any).getTime())))) : 'Syncing...';
 
         return {
             id: String(idx + 1),
-            title: m || 'Initialization',
+            title: m || 'Mission Protocol',
             date: lastDeadline,
             status: progress === 100 ? 'completed' : 'upcoming',
             progress
@@ -46,25 +47,27 @@ export default function TimelineHorizon() {
       return (
         <div className="glass rounded-3xl p-8 text-center border border-white/5 opacity-50">
              <Clock className="w-12 h-12 text-[#8B9DC3] mx-auto mb-4" />
-             <p className="font-mono text-sm text-[#8B9DC3]">Awaiting AI Roadmap Architecture...</p>
+             <p className="font-mono text-sm text-[#8B9DC3]">Architecting Mission Horizon... AI is establishing critical path milestones.</p>
         </div>
       );
   }
 
   return (
-    <div className="glass rounded-3xl p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="glass rounded-3xl p-6">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="font-display text-2xl font-bold text-[#E8F0FF]">
           Timeline Horizon
         </h2>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-[#00F0FF]" />
-          <span className="font-mono text-sm text-[#8B9DC3]">Q1 2024</span>
+          <span className="font-mono text-sm text-[#8B9DC3]">
+            Q{Math.floor(new Date().getMonth() / 3) + 1} {new Date().getFullYear()}
+          </span>
         </div>
       </div>
 
       <ScrollArea className="w-full">
-        <div className="relative min-w-max pb-4">
+        <div className="relative min-w-max">
           {/* Timeline Line */}
           <div className="absolute top-12 left-0 right-0 h-1 bg-gradient-to-r from-[#00FF88] via-[#FFB800] to-[#00F0FF] opacity-20" />
           

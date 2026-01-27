@@ -18,6 +18,12 @@ export interface Task {
   subtasks?: Task[];
   dependencies?: string[];
   milestone?: string;
+  reviewedBy?: string | { _id: string; name: string; email: string };
+  rejectionNote?: string;
+  attachments?: string[];
+  rejectionAttachments?: string[];
+  timerStartedAt?: string | Date;
+  createdAt?: string | Date;
 }
 
 export interface Risk {
@@ -53,6 +59,7 @@ export interface Project {
 
 export interface TeamMember {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: string;
@@ -82,17 +89,19 @@ export interface Notification {
 interface AppState {
   // Project
   project: Project | null;
-  fetchProject: () => Promise<void>;
-  updateProject: (updates: Partial<Project>) => void; // TODO: Connect to API
+  fetchProject: (projectId?: string) => Promise<void>;
+  updateProject: (updates: Partial<Project>) => Promise<void>;
+  archiveProject: () => Promise<void>;
 
   // Tasks
   tasks: Task[];
   fetchTasks: () => Promise<void>;
   addTask: (task: Omit<Task, 'id'>, projectId?: string) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
-  deleteTask: (id: string) => void;
-  submitForReview: (taskId: string) => Promise<void>;
-  approveTask: (taskId: string) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  submitForReview: (taskId: string, data?: Partial<Task>) => Promise<void>;
+  rejectTask: (taskId: string, data: Partial<Task>) => Promise<void>;
+  approveTask: (taskId: string, userId?: string) => Promise<void>;
   selectedTasks: string[];
   setSelectedTasks: (ids: string[]) => void;
   toggleTaskSelection: (id: string) => void;
@@ -100,14 +109,16 @@ interface AppState {
   // Risks
   risks: Risk[];
   fetchRisks: () => Promise<void>;
-  addRisk: (risk: Omit<Risk, 'id'>) => void;
-  resolveRisk: (id: string) => void;
+  addRisk: (risk: Omit<Risk, 'id'>) => Promise<void>;
+  updateRisk: (id: string, updates: Partial<Risk>) => Promise<void>;
+  deleteRisk: (id: string) => Promise<void>;
+  resolveRisk: (id: string) => Promise<void>;
 
   // Team
   team: TeamMember[];
   fetchTeam: () => Promise<void>;
-  addTeamMember: (member: Omit<TeamMember, 'id'>) => void;
-  removeTeamMember: (id: string) => void;
+  addTeamMember: (member: Omit<TeamMember, 'id'>) => Promise<void>;
+  removeTeamMember: (id: string) => Promise<void>;
 
   // Activities
   activities: Activity[];
@@ -135,6 +146,7 @@ interface AppState {
   setOnboardingData: (data: any) => void;
   completeOnboarding: (data: { name: string; vision: string; team: any[]; ownerId: string; ownerEmail?: string; deadline?: string; totalMilestones?: number }) => Promise<void>;
   startAgentHeartbeat: () => void;
+  checkProjectCompletion: () => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -163,6 +175,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             get().fetchRisks()
           ]);
           get().startAgentHeartbeat();
+          get().checkProjectCompletion();
         }
     } catch (err) {
         console.error("Failed to fetch project", err);
@@ -177,11 +190,58 @@ export const useAppStore = create<AppState>((set, get) => ({
             set((state) => ({ project: state.project ? { ...state.project, ...updates } : null }));
             return;
         }
-        const res = await projects.update({ ...currentProject, ...updates });
+        // Backend expects projectId explicitly in the body
+        const res = await projects.update({ ...updates, projectId: currentProject._id });
         set({ project: res.data });
-        get().addActivity({ agent: 'Planner', action: `Updated project settings`, time: 'Just now' });
+        get().addActivity({ agent: 'Planner', action: `Updated project context`, time: 'Just now' });
+        // Refresh project to get calculated fields if any
+        await get().fetchProject(currentProject._id);
     } catch (err) {
         console.error("Failed to update project", err);
+        throw err;
+    }
+  },
+  archiveProject: async () => {
+    try {
+        const projectId = get().project?._id;
+        if (!projectId) return;
+
+        await projects.archive(projectId);
+        
+        // Complete Reset for New Project
+        set({ 
+            project: null,
+            tasks: [],
+            risks: [],
+            team: [],
+            activities: [],
+            notifications: [],
+            selectedTasks: [],
+            onboardingData: null,
+            activeModal: null,
+            modalData: null,
+            agentStates: {
+                Planner: 'idle',
+                Execution: 'idle',
+                Risk: 'idle',
+                Communication: 'idle',
+                Recommendation: 'idle',
+            }
+        });
+
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('octoops_owner_email');
+            localStorage.removeItem('octoops_owner_name');
+        }
+
+        // Redirect to onboarding for new project
+        if (typeof window !== 'undefined') {
+            window.location.href = '/onboarding';
+        }
+    } catch (err) {
+        console.error("Failed to archive project", err);
+        throw err;
     }
   },
 
@@ -206,22 +266,36 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().activateAgent('Planner');
     } catch (err) {
         console.error("Failed to create task", err);
+        throw err;
     }
   },
   updateTask: async (id, updates) => {
     try {
         const res = await tasksApi.update(id, updates);
         set((state) => ({
-            tasks: state.tasks.map((t) => t.id === id ? res.data : t)
+            tasks: state.tasks.map((t) => (t.id === id || t._id === id) ? res.data : t)
         }));
-        get().addActivity({ agent: 'Execution', action: `Updated task ${id}`, time: 'Just now' });
+        get().addActivity({ agent: 'Execution', action: `Task status synchronization successful`, time: 'Just now' });
         get().activateAgent('Execution');
+        // If status changed to done or was rejected, refresh project stats
+        if (updates.status === 'done' || updates.status === 'todo') {
+            await get().fetchProject(get().project?._id);
+            get().checkProjectCompletion();
+        }
     } catch (err) {
         console.error("Failed to update task", err);
+        throw err;
     }
   },
-  deleteTask: (id) => {
-    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+  deleteTask: async (id) => {
+    try {
+      await tasksApi.delete(id);
+      set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id && t._id !== id) }));
+      get().addActivity({ agent: 'Execution', action: `Deleted task ${id}`, time: 'Just now' });
+    } catch (err) {
+      console.error("Failed to delete task", err);
+      throw err;
+    }
   },
   
   selectedTasks: [],
@@ -232,16 +306,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       : [...state.selectedTasks, id]
   })),
 
-  submitForReview: async (taskId) => {
+  submitForReview: async (taskId, data) => {
     try {
         // Optimistic update
         set((state) => ({
-          tasks: state.tasks.map((t) => t.id === taskId ? { ...t, status: 'in-review' } : t)
+          tasks: state.tasks.map((t) => (t.id === taskId || t._id === taskId) ? { ...t, status: 'in-review', ...data } : t)
         }));
         
-        await tasksApi.submit(taskId);
+        await tasksApi.submit(taskId, data);
         
-        get().addActivity({ agent: 'Execution', action: `Task submitted for review: ${get().tasks.find(t => t.id === taskId)?.title}`, time: 'Just now' });
+        get().addActivity({ agent: 'Execution', action: `Task submitted for review`, time: 'Just now' });
         get().activateAgent('Execution');
 
         get().addNotification({
@@ -253,19 +327,41 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
     } catch (err) {
         console.error("Failed to submit task", err);
+        // Rollback optimistic update
+        await get().fetchTasks(); 
+        throw err;
     }
   },
 
-  approveTask: async (taskId) => {
-     try {
-        await tasksApi.approve(taskId);
+  rejectTask: async (taskId, data) => {
+    try {
+        await tasksApi.reject(taskId, data);
         set((state) => ({
-          tasks: state.tasks.map((t) => t.id === taskId ? { ...t, status: 'done' } : t)
+            tasks: state.tasks.map((t) => (t.id === taskId || t._id === taskId) ? { ...t, status: 'todo', ...data } : t)
+        }));
+        get().addActivity({ agent: 'Communication', action: `Task rejected by QA`, time: 'Just now' });
+        get().activateAgent('Communication');
+        await get().fetchProject(get().project?._id);
+    } catch (err) {
+        console.error("Failed to reject task", err);
+        await get().fetchTasks();
+        throw err;
+    }
+  },
+
+  approveTask: async (taskId, userId) => {
+     try {
+        await tasksApi.approve(taskId, userId);
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === taskId || t._id === taskId) ? { ...t, status: 'done', reviewedBy: userId, rejectionNote: undefined } : t)
         }));
         get().addActivity({ agent: 'Execution', action: `Task approved and completed`, time: 'Just now' });
         get().activateAgent('Execution');
+        await get().fetchProject(get().project?._id); // Refresh project stats
      } catch (err) {
         console.error("Failed to approve task", err);
+        await get().fetchTasks();
+        throw err;
      }
   },
 
@@ -281,29 +377,68 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error("Failed to fetch risks", err);
     }
   },
-  addRisk: (risk) => {
-    const newRisk: Risk = { 
-      ...risk, 
-      id: generateId(), 
-      detectedAt: new Date(), 
-      resolved: false,
-      detectedBy: risk.detectedBy || 'manual'
-    };
-    set((state) => ({ risks: [...state.risks, newRisk] }));
-    get().addNotification({
-      agent: 'Risk',
-      title: 'New Risk Detected',
-      message: risk.title,
-      type: 'warning',
-      read: false,
-    });
-    get().activateAgent('Risk', 3000);
+  addRisk: async (risk) => {
+    try {
+      const projectId = get().project?._id;
+      if (!projectId) return;
+
+      const res = await risksApi.create({ 
+        ...risk, 
+        projectId,
+        detectedBy: 'manual'
+      });
+      
+      set((state) => ({ risks: [res.data, ...state.risks] }));
+      
+      get().addNotification({
+        agent: 'Risk',
+        title: 'New Risk Logged',
+        message: risk.title,
+        type: 'warning',
+        read: false,
+      });
+      get().activateAgent('Risk', 3000);
+      await get().fetchProject(projectId); // Update health score
+    } catch (err) {
+      console.error("Failed to add risk", err);
+    }
   },
-  resolveRisk: (id) => {
-    set((state) => ({
-      risks: state.risks.map((r) => r.id === id ? { ...r, resolved: true } : r)
-    }));
-    get().addActivity({ agent: 'Risk', action: `Resolved risk: ${get().risks.find(r => r.id === id)?.title}`, time: 'Just now' });
+  updateRisk: async (id, updates) => {
+    try {
+      const res = await risksApi.update(id, updates);
+      set((state) => ({
+        risks: state.risks.map((r) => (r.id === id || r._id === id) ? res.data : r)
+      }));
+      get().addActivity({ agent: 'Risk', action: `Updated risk: ${updates.title || 'parameters'}`, time: 'Just now' });
+      await get().fetchProject(get().project?._id);
+    } catch (err) {
+      console.error("Failed to update risk", err);
+    }
+  },
+  deleteRisk: async (id) => {
+    try {
+      await risksApi.delete(id);
+      set((state) => ({ risks: state.risks.filter((r) => r.id !== id && r._id !== id) }));
+      await get().fetchProject(get().project?._id);
+    } catch (err) {
+      console.error("Failed to delete risk", err);
+    }
+  },
+  resolveRisk: async (id) => {
+    try {
+      await risksApi.resolve(id);
+      await get().fetchRisks(); 
+      get().addActivity({ agent: 'Risk', action: `Resolved risk: ${get().risks.find(r => r.id === id || r._id === id)?.title}`, time: 'Just now' });
+      get().addNotification({
+        agent: 'Risk',
+        title: 'Risk Resolved',
+        message: 'Risk has been successfully resolved',
+        type: 'success',
+        read: false
+      });
+    } catch (err) {
+      console.error("Failed to resolve risk", err);
+    }
   },
 
   // Team
@@ -330,11 +465,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error("Failed to invite member", err);
     }
   },
-  removeTeamMember: (id) => {
-    const member = get().team.find((m) => m.id === id);
-    set((state) => ({ team: state.team.filter((m) => m.id !== id) }));
-    if (member) {
-      get().addActivity({ agent: 'Communication', action: `Removed team member: ${member.name}`, time: 'Just now' });
+  removeTeamMember: async (id) => {
+    try {
+        const projectId = get().project?._id;
+        if (!projectId) return;
+
+        const member = get().team.find((m) => m.id === id || m._id === id);
+        
+        // Persist to backend
+        await teamApi.removeMember(id, projectId);
+
+        set((state) => ({ team: state.team.filter((m) => m.id !== id && m._id !== id) }));
+        
+        if (member) {
+          get().addActivity({ agent: 'Communication', action: `Removed team member: ${member.name}`, time: 'Just now' });
+        }
+        get().activateAgent('Communication');
+    } catch (err) {
+        console.error("Failed to remove team member", err);
+        throw err;
     }
   },
 
@@ -377,6 +526,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   completeOnboarding: async (data) => {
     try {
+        // Prevent re-initialization if project is in-review
+        const existingProject = get().project;
+        if (existingProject?.status === 'in-review') {
+            throw new Error("Cannot re-initialize project while it is in review.");
+        }
+
         // Activate ALL agents during launch
         Object.keys(get().agentStates).forEach(agent => get().activateAgent(agent, 6000));
 
@@ -455,5 +610,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   activateAgent: (agent, duration = 3000) => {
     get().setAgentState(agent, 'active');
     setTimeout(() => get().setAgentState(agent, 'idle'), duration);
+  },
+  checkProjectCompletion: () => {
+    const { project, tasks, activeModal, openModal } = get();
+    if (!project || tasks.length === 0 || activeModal === 'celebration' || project.status === 'archived') return;
+
+    const allTasksDone = tasks.every(t => t.status === 'done');
+    const allMilestonesReached = project.totalMilestones > 0 && project.milestonesCompleted >= project.totalMilestones;
+
+    if (allTasksDone && allMilestonesReached) {
+        // Trigger celebration
+        setTimeout(() => openModal('celebration'), 1000); // Slight delay for smoothness
+    }
   },
 }));

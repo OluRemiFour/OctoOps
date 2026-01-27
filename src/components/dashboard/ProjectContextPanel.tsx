@@ -5,8 +5,10 @@ import { Users, Target, TrendingUp, Edit2, Rocket, Sparkles, Image as ImageIcon 
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 
+import { Map } from 'lucide-react'; // Added import
+
 export default function ProjectContextPanel() {
-  const { project, team, onboardingData, openModal } = useAppStore();
+  const { project, team, onboardingData, openModal, archiveProject } = useAppStore();
 
   if (!project) {
     const isPreview = onboardingData?.name || onboardingData?.vision;
@@ -82,27 +84,27 @@ export default function ProjectContextPanel() {
             </p>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-2">
             <Button
               onClick={() => openModal('project-vision')}
-              className="bg-[#9D4EDD]/20 border border-[#9D4EDD]/40 text-[#9D4EDD] hover:bg-[#9D4EDD]/30 font-bold"
+              className="bg-[#9D4EDD]/20 text-xs border border-[#9D4EDD]/40 text-[#9D4EDD] hover:bg-[#9D4EDD]/30 font-bold"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
+              <Sparkles className="w-4 h-4 mr-1" />
               Define Vision
             </Button>
             <Button
-              onClick={() => openModal('image-upload')}
-              className="bg-[#00F0FF]/20 border border-[#00F0FF]/40 text-[#00F0FF] hover:bg-[#00F0FF]/30 font-bold"
+              onClick={() => openModal('roadmap-view')}
+              className="bg-[#00F0FF]/20 text-xs border border-[#00F0FF]/40 text-[#00F0FF] hover:bg-[#00F0FF]/30 font-bold"
             >
-              <ImageIcon className="w-4 h-4 mr-2" />
+              <Map className="w-4 h-4 mr-1" />
               Analyze Roadmap
             </Button>
             <Button
-              onClick={() => openModal('project-vision')}
-              className="bg-[#00FF88] text-[#0A0E27] hover:bg-[#00FF88]/90 font-bold glow-green ml-auto"
+              onClick={() => openModal('archive-confirm')}
+              className="bg-[#00FF88] text-[#0A0E27] text-xs hover:bg-[#00FF88]/90 font-bold glow-green ml-auto"
             >
-              <Rocket className="w-4 h-4 mr-2" />
-              Launch OctoOps
+              <Rocket className="w-4 h-4 mr-1" />
+              Launch & Complete
             </Button>
           </div>
 

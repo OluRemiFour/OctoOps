@@ -11,6 +11,14 @@ const api = axios.create({
   },
 });
 
+export const common = {
+  upload: (formData: FormData) => {
+    return api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+};
+
 export const auth = {
   login: (identifier: string) => api.post('/auth/login', { identifier }),
   signup: (data: any) => api.post('/auth/signup', data),
@@ -21,6 +29,7 @@ export const projects = {
   get: (projectId?: string) => api.get('/projects', { params: { projectId } }),
   update: (data: any) => api.put('/projects', data),
   getUserProjects: (userId: string) => api.get('/projects/user', { params: { userId } }),
+  archive: (projectId: string) => api.post('/projects/archive', { projectId }),
 };
 
 export const tasks = {
@@ -28,8 +37,9 @@ export const tasks = {
   create: (data: any) => api.post('/tasks', data),
   update: (id: string, data: any) => api.put(`/tasks/${id}`, data),
   delete: (id: string) => api.delete(`/tasks/${id}`),
-  submit: (id: string) => api.post(`/tasks/${id}/submit`),
-  approve: (id: string) => api.post(`/tasks/${id}/approve`),
+  submit: (id: string, data: any) => api.post(`/tasks/${id}/submit`, data),
+  reject: (id: string, data: any) => api.post(`/tasks/${id}/reject`, data),
+  approve: (id: string, userId?: string) => api.post(`/tasks/${id}/approve`, { userId }),
 };
 
 export const risks = {
@@ -37,7 +47,7 @@ export const risks = {
   create: (data: any) => api.post('/risks', data),
   update: (id: string, data: any) => api.put(`/risks/${id}`, data),
   delete: (id: string) => api.delete(`/risks/${id}`),
-  resolve: (id: string, userId: string) => api.post(`/risks/${id}/resolve`, { userId }),
+  resolve: (id: string, userId?: string) => api.post(`/risks/${id}/resolve`, { userId }),
   analyze: (projectId: string, projectData: any) => api.post('/risks/analyze', { projectId, projectData }),
 };
 

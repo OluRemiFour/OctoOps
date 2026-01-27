@@ -168,7 +168,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const hasQA = invites.some(i => i.role === 'qa' && i.email.trim() !== '');
+  const hasQA = invites.some(i => i.role === 'QA Engineer' && i.email.trim() !== '');
 
   return (
     <div className="min-h-screen bg-[#0A0E27] noise-overlay flex items-center justify-center p-6 flex-col">
@@ -339,9 +339,18 @@ export default function OnboardingWizard() {
                                 onChange={(e) => updateInvite(i, 'role', e.target.value)}
                                 className="bg-[#0A0E27]/50 border border-white/10 rounded-md px-3 text-[#E8F0FF] focus:outline-none focus:border-[#00F0FF]"
                             >
-                                <option value="member">Member</option>
-                                <option value="qa">QA / Reviewer</option>
-                                <option value="owner">Admin</option>
+                                <option value="Project Lead">Project Lead</option>
+                                <option value="Frontend Developer">Frontend Developer</option>
+                                <option value="Backend Developer">Backend Developer</option>
+                                <option value="Fullstack Developer">Fullstack Developer</option>
+                                <option value="UI/UX Designer">UI/UX Designer</option>
+                                <option value="QA Engineer">QA Engineer</option>
+                                <option value="Mobile Developer">Mobile Developer</option>
+                                <option value="DevOps Engineer">DevOps Engineer</option>
+                                <option value="Content Creator">Content Creator</option>
+                                <option value="Marketing Manager">Marketing Manager</option>
+                                <option value="Technical Writer">Technical Writer</option>
+                                <option value="Other">Other</option>
                             </select>
                             {invites.length > 1 && (
                                 <button onClick={() => removeInvite(i)} className="p-2 text-[#FF3366] hover:bg-[#FF3366]/10 rounded-lg">
@@ -386,20 +395,22 @@ export default function OnboardingWizard() {
                     )}
                  </Button>
             ) : (
-                 <Button 
-                    onClick={handleComplete} 
-                    disabled={!hasQA || isCompleting}
-                    className="bg-[#00FF88] text-[#0A0E27] font-bold h-12 px-8 min-w-[200px] glow-green disabled:opacity-50"
-                 >
-                    {isCompleting ? (
-                        <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Initializing Network...
-                        </>
-                    ) : (
-                        "Launch OctoOps"
-                    )}
-                 </Button>
+                  <Button 
+                     onClick={handleComplete} 
+                     disabled={!hasQA || isCompleting || project?.status === 'in-review'}
+                     className={`bg-[#00FF88] text-[#0A0E27] font-bold h-12 px-8 min-w-[200px] glow-green disabled:opacity-50 ${project?.status === 'in-review' ? 'cursor-not-allowed' : ''}`}
+                  >
+                     {isCompleting ? (
+                         <>
+                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                             Initializing Network...
+                         </>
+                     ) : project?.status === 'in-review' ? (
+                        "Project In Review"
+                     ) : (
+                         "Launch OctoOps"
+                     )}
+                  </Button>
             )}
         </div>
       </div>

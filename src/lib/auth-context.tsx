@@ -17,12 +17,14 @@ interface AuthContextType {
   login: (identifier: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load user from local storage on mount (simple persistence for demo)
   useEffect(() => {
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    setIsLoading(false);
   }, []);
 
   const login = async (identifier: string) => {
@@ -46,10 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('octoops_user', JSON.stringify(loggedUser));
             return true;
         }
-        return false;
+        throw new Error('Invalid response from server');
     } catch (err) {
         console.error("Login verification failed:", err);
-        return false;
+        throw err; // Propagate error to caller
     }
   };
 
@@ -59,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

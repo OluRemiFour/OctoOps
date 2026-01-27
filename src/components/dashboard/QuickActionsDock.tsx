@@ -4,18 +4,25 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, UserPlus, Image, MessageCircle, FileText } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 
 export default function QuickActionsDock() {
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const { openModal } = useAppStore();
+  const { user } = useAuth();
 
-  const actions = [
-    { id: 'add-task', icon: Plus, label: 'Add Task', color: '#00F0FF', modal: 'add-task' },
-    { id: 'invite', icon: UserPlus, label: 'Invite Member', color: '#00FF88', modal: 'invite-member' },
-    { id: 'upload', icon: Image, label: 'Upload Image', color: '#FFB800', modal: 'image-upload' },
-    { id: 'ask', icon: MessageCircle, label: 'Ask OctoOps', color: '#9D4EDD', modal: 'ask-octoops' },
-    { id: 'reports', icon: FileText, label: 'View Reports', color: '#FF3366', modal: 'view-reports' },
+  const allActions = [
+    { id: 'add-task', icon: Plus, label: 'Add Task', color: '#00F0FF', modal: 'add-task', ownerOnly: true },
+    { id: 'invite', icon: UserPlus, label: 'Invite Member', color: '#00FF88', modal: 'invite-member', ownerOnly: true },
+    { id: 'upload', icon: Image, label: 'Upload Image', color: '#FFB800', modal: 'image-upload', ownerOnly: false },
+    { id: 'ask', icon: MessageCircle, label: 'Ask OctoOps', color: '#9D4EDD', modal: 'ask-octoops', ownerOnly: false },
+    { id: 'reports', icon: FileText, label: 'View Reports', color: '#FF3366', modal: 'view-reports', ownerOnly: false },
   ];
+
+  // Filter actions based on user role
+  const actions = allActions.filter(action => 
+    !action.ownerOnly || user?.role === 'owner'
+  );
 
   return (
     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">

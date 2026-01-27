@@ -13,7 +13,7 @@ function LoginContent() {
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const mode = searchParams.get('mode'); // 'admin' (signup) or 'member' (login)
+  const mode = searchParams.get('mode'); 
   
   // State for Member Login (Invite Code)
   const [inviteCode, setInviteCode] = useState('');
@@ -24,25 +24,42 @@ function LoginContent() {
   const [adminEmail, setAdminEmail] = useState('');
   const [isOwnerLoading, setIsOwnerLoading] = useState(false);
   
+  // Auto-fill invite code from URL
+  React.useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) {
+      setInviteCode(code);
+    }
+  }, [searchParams]);
+
   const handleMemberLogin = async () => {
     if (!inviteCode) return;
     
     setIsLoading(true);
     try {
-        const success = await login(inviteCode);
-        if (!success) {
-            toast({
-                title: "Authentication Failed",
-                description: "Invalid code or unregistered email.",
-                variant: "destructive"
-            });
-            return;
+        // 1. Try to accept the invite first if it's a code (hex-like check or just try)
+        // If it's an email, it will fail or we can skip. 
+        // Hex codes are typically 32 chars.
+        if (inviteCode.length > 20 && !inviteCode.includes('@')) {
+            try {
+                console.log(`[JoinFlow] Attempting to auto-accept invite: ${inviteCode}`);
+                const { team } = await import('@/lib/api');
+                const acceptanceRes = await team.acceptInvite(inviteCode, 'Team Member');
+                console.log(`[JoinFlow] Acceptance result:`, acceptanceRes.data);
+            } catch (acceptErr) {
+                console.warn("[JoinFlow] Auto-accept failed or skipped (might be already accepted):", acceptErr);
+            }
         }
+
+        // 2. Perform the actual login
+        await login(inviteCode);
         router.push('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
+        const errorMessage = error.response?.data?.error || error.message || "An unexpected error occurred during login.";
+        
         toast({
-            title: "Error",
-            description: "An unexpected error occurred during login.",
+            title: "Authentication Failed",
+            description: errorMessage,
             variant: "destructive"
         });
     } finally {
@@ -102,6 +119,12 @@ function LoginContent() {
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#00F0FF] rounded-full blur-[150px] opacity-10 animate-pulse" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#9D4EDD] rounded-full blur-[150px] opacity-10 animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      <div className="absolute top-8 left-8 z-20">
+             <a href="/" className="text-[#8B9DC3] hover:text-[#E8F0FF] text-sm flex items-center gap-2 transition-colors">
+                &larr; Back to Home
+             </a>
       </div>
 
       <div className="w-full max-w-md p-8 glass rounded-3xl relative z-10 mx-4 border border-white/5">
@@ -182,8 +205,8 @@ function LoginContent() {
           ) : (
             /* MEMBER LOGIN FORM */
             <div className="animate-in fade-in slide-in-from-left-4">
-               <div className="space-y-2">
-                 <label className="font-mono text-xs text-[#00FF88] uppercase tracking-wider ml-1">Invite Code / Link / Email Address</label>
+               <div className="space-y-4">
+                 <label className="font-mono text-xs text-[#00FF88] uppercase tracking-wider ml-1">Invite Code / Email Address</label>
                  <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B9DC3]" />
                     <Input 
@@ -225,11 +248,7 @@ function LoginContent() {
           )}
         </div>
         
-        <div className="absolute top-6 left-6 z-20">
-             <a href="/" className="text-[#8B9DC3] hover:text-[#E8F0FF] text-sm flex items-center gap-2 transition-colors">
-                &larr; Back to Home
-             </a>
-        </div>
+
 
         <div className="mt-4 text-center border-t border-white/5 pt-3">
              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
