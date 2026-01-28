@@ -77,9 +77,20 @@ export default function AIRiskAnalysisModal() {
             </p>
             <Button
               onClick={handleStartAnalysis}
-              className="bg-[#9D4EDD] hover:bg-[#9D4EDD]/90 text-white font-bold h-12 px-8 rounded-xl glow-purple"
+              disabled={isAnalyzing}
+              className="bg-[#9D4EDD] hover:bg-[#9D4EDD]/90 text-white font-bold h-12 px-8 rounded-xl glow-purple disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Start AI Scan
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Start AI Scan
+                </>
+              )}
             </Button>
           </div>
         ) : isAnalyzing ? (
