@@ -19,7 +19,12 @@ export default function AIRiskAnalysisModal() {
   const handleStartAnalysis = async () => {
     if (!project?._id) return;
     
+    // Set loading state immediately for instant visual feedback
     setIsAnalyzing(true);
+    
+    // Small delay to ensure state update is rendered
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     activateAgent('Risk', 5000);
     try {
       const res = await risksApi.analyze(project._id, {

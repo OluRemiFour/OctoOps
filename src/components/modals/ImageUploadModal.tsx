@@ -61,8 +61,13 @@ export default function ImageUploadModal() {
   const startScan = async () => {
     if (!file) return;
 
+    // Set loading state immediately for instant visual feedback
     setIsScanning(true);
     setScanProgress(30);
+    
+    // Small delay to ensure state update is rendered
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     activateAgent('Planner', 5000);
 
     try {
