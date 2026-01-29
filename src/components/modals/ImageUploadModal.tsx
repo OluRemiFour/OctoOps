@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +34,15 @@ export default function ImageUploadModal() {
 
   const isOpen = activeModal === 'image-upload';
 
+  // Cleanup object URL to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
@@ -51,21 +60,18 @@ export default function ImageUploadModal() {
 
   const processFile = (selectedFile: File) => {
     setFile(selectedFile);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(selectedFile);
+    // Use URL.createObjectURL instead of FileReader for instant preview and better performance
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setPreview(objectUrl);
   };
 
   const startScan = async () => {
     if (!file) return;
 
-    // Set loading state immediately for instant visual feedback
     setIsScanning(true);
     setScanProgress(30);
     
-    // Small delay to ensure state update is rendered
+    // Allow UI to update before starting heavy operations
     await new Promise(resolve => setTimeout(resolve, 0));
     
     activateAgent('Planner', 5000);
@@ -84,7 +90,6 @@ export default function ImageUploadModal() {
       if (res.data) {
         setExtractedText(res.data.extractedText || '');
         
-        // Convert recommendation items to our internal format
         const items: ExtractedItem[] = [
           ...(res.data.recommendations?.tasks?.map((t: any, i: number) => ({
             id: `task-${i}`,
@@ -152,10 +157,8 @@ export default function ImageUploadModal() {
     setIsMerging(true);
     activateAgent('Planner', 2000);
 
-    // Simulate merging
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Add tasks for selected items
     selectedItems
       .filter((item) => item.type === 'task')
       .forEach((item) => {
@@ -180,7 +183,6 @@ export default function ImageUploadModal() {
       read: false,
     });
 
-    // Save to onboarding data - pass name, vision and recommendations
     setOnboardingData({ 
       name: scanResults?.name || project?.name || '',
       vision: extractedText,
@@ -191,8 +193,6 @@ export default function ImageUploadModal() {
     resetModal();
     closeModal();
     
-    // Only open vision modal if we're in the dashboard (project exists)
-    // If onboarding, the wizard will update automatically via useEffect
     if (project?._id || project?.id) {
         setTimeout(() => {
             openModal('project-vision');
@@ -202,7 +202,7 @@ export default function ImageUploadModal() {
 
   const resetModal = () => {
     setFile(null);
-    setPreview(null);
+    setPreview(null); // This triggers existing useEffect cleanup
     setIsScanning(false);
     setScanProgress(0);
     setExtractedItems([]);
@@ -234,7 +234,6 @@ export default function ImageUploadModal() {
 
         <div className="mt-4">
           {!preview ? (
-            /* Upload Zone */
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
@@ -273,9 +272,7 @@ export default function ImageUploadModal() {
               </div>
             </div>
           ) : (
-            /* Split View */
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Image Preview */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-lg font-bold text-[#E8F0FF]">Original Image</h3>
@@ -296,7 +293,6 @@ export default function ImageUploadModal() {
                     className="w-full h-auto rounded-xl max-h-[400px] object-contain"
                   />
                   
-                  {/* Scanning Overlay */}
                   {isScanning && (
                     <div className="absolute inset-0 bg-[#0A0E27]/80 flex flex-col items-center justify-center rounded-2xl">
                       <div className="relative w-24 h-24 mb-4">
@@ -336,7 +332,6 @@ export default function ImageUploadModal() {
                   </Button>
                 )}
 
-                {/* Extracted Text Review Area */}
                 {!isScanning && extractedText && (
                   <div className="space-y-3 pt-4">
                     <div className="flex items-center justify-between">
@@ -366,7 +361,6 @@ export default function ImageUploadModal() {
                 )}
               </div>
 
-              {/* Extracted Items */}
               {extractedItems.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">

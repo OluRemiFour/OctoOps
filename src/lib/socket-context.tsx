@@ -22,20 +22,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { project, fetchTeam, fetchTasks, fetchRisks } = useAppStore();
 
   useEffect(() => {
-    // Connect to WebSocket server
-    const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const socketUrl = (import.meta as any).env?.VITE_API_URL?.replace('/api', '') || 'https://octo-ops-backend.onrender.com';
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 10,
+      timeout: 20000,
+      withCredentials: true
     });
 
     newSocket.on('connect', () => {
       console.log('✅ WebSocket connected:', newSocket.id);
       setIsConnected(true);
       
-      // Join project room if project exists
       if (project?._id) {
         newSocket.emit('join-project', project._id);
       }
@@ -51,7 +51,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
     });
 
-    // Listen for team updates
     newSocket.on('team-updated', (data) => {
       console.log('📢 Team updated:', data);
       fetchTeam();
@@ -60,13 +59,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Listen for task updates
     newSocket.on('tasks-updated', (data) => {
       console.log('📢 Tasks updated:', data);
       fetchTasks();
     });
 
-    // Listen for risk resolution
     newSocket.on('risk-resolved', (data) => {
       console.log('📢 Risk resolved:', data);
       fetchRisks();
@@ -79,7 +76,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Join/leave project room when project changes
   useEffect(() => {
     if (socket && isConnected && project?._id) {
       socket.emit('join-project', project._id);

@@ -23,7 +23,6 @@ export default function OctopusVisualization() {
   const handleAgentClick = (agentName: string) => {
     activateAgent(agentName, 2000);
     
-    // Open relevant modal based on agent
     const modalMap: Record<string, string> = {
       Planner: 'add-task',
       Execution: 'view-reports',
@@ -48,7 +47,6 @@ export default function OctopusVisualization() {
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Glow Filter */}
           <filter id="glow-effect">
             <feGaussianBlur stdDeviation="8" result="coloredBlur" />
             <feMerge>
@@ -57,14 +55,12 @@ export default function OctopusVisualization() {
             </feMerge>
           </filter>
           
-          {/* Gradient for Brain */}
           <radialGradient id="brain-gradient">
             <stop offset="0%" stopColor={hasHighRisk ? "#FF3366" : "#00F0FF"} stopOpacity="0.4" />
             <stop offset="50%" stopColor={hasHighRisk ? "#FF0000" : "#9D4EDD"} stopOpacity="0.2" />
             <stop offset="100%" stopColor="#0A0E27" stopOpacity="0.1" />
           </radialGradient>
 
-          {/* Particle animations */}
           {agentConfig.map((agent, index) => (
             <g key={`particle-def-${index}`}>
               <circle id={`particle-${index}`} r="3" fill={agent.color} opacity="0.8" />
@@ -72,7 +68,6 @@ export default function OctopusVisualization() {
           ))}
         </defs>
 
-        {/* Risk Ripple Animation */}
         {hasHighRisk && (
           <g>
             <circle cx="400" cy="250" r="100" fill="none" stroke="#FF3366" strokeWidth="2" opacity="0.5" className="animate-ping" style={{ animationDuration: '3s' }} />
@@ -80,14 +75,12 @@ export default function OctopusVisualization() {
           </g>
         )}
 
-        {/* Tentacles */}
         {agentConfig.map((agent, index) => {
           const baseX = 400;
           const baseY = 250;
           const angle = (agent.angle * Math.PI) / 180;
           const length = 180;
           
-          // Convergence Logic: Pull agents inward if converging
           const currentLength = isConverging ? 80 : 180; 
           
           const endX = baseX + Math.cos(angle) * currentLength;
@@ -100,10 +93,9 @@ export default function OctopusVisualization() {
 
           return (
             <g key={index} 
-               className="cursor-pointer transition-all duration-1000 ease-in-out" // Smooth transition for convergence
+               className="cursor-pointer transition-all duration-1000 ease-in-out" 
                onClick={() => handleAgentClick(agent.name)}>
               
-              {/* Tentacle Glow Layer */}
               {isActive && (
                 <path
                   d={`M ${baseX} ${baseY} Q ${controlX} ${controlY} ${endX} ${endY}`}
@@ -117,7 +109,6 @@ export default function OctopusVisualization() {
                 />
               )}
               
-              {/* Main Tentacle */}
               <path
                 d={`M ${baseX} ${baseY} Q ${controlX} ${controlY} ${endX} ${endY}`}
                 stroke={agent.color}
@@ -129,7 +120,6 @@ export default function OctopusVisualization() {
                 strokeDasharray={isActive ? "none" : "10,5"}
               />
               
-              {/* End Node */}
               <circle
                 cx={endX}
                 cy={endY}
@@ -140,7 +130,6 @@ export default function OctopusVisualization() {
                 className="transition-all duration-1000 ease-in-out"
               />
               
-              {/* Inner Node Pulse */}
               {isActive && (
                 <circle
                   cx={endX}
@@ -154,7 +143,6 @@ export default function OctopusVisualization() {
                 />
               )}
               
-              {/* Label */}
               <text
                 x={endX + Math.cos(angle) * 35}
                 y={endY + Math.sin(angle) * 35 + 5}
@@ -169,7 +157,6 @@ export default function OctopusVisualization() {
                 {agent.name}
               </text>
               
-              {/* Status Indicator */}
               <text
                 x={endX + Math.cos(angle) * 35}
                 y={endY + Math.sin(angle) * 35 + 20}
@@ -186,9 +173,7 @@ export default function OctopusVisualization() {
           );
         })}
 
-        {/* Central Brain */}
         <g>
-          {/* Outer Glow */}
           <circle
             cx="400"
             cy="250"
@@ -198,7 +183,6 @@ export default function OctopusVisualization() {
             className={`animate-pulse ${hasHighRisk ? 'animate-pulse-fast' : ''}`}
           />
           
-          {/* Main Brain Circle */}
           <circle
             cx="400"
             cy="250"
@@ -209,7 +193,6 @@ export default function OctopusVisualization() {
             opacity="0.6"
           />
           
-          {/* Inner Core - Pulsing */}
           <circle
             cx="400"
             cy="250"
@@ -219,7 +202,6 @@ export default function OctopusVisualization() {
             style={{ animationDelay: '500ms', animationDuration: '3s' }}
           />
           
-          {/* Innermost Core */}
           <circle
             cx="400"
             cy="250"
@@ -229,7 +211,6 @@ export default function OctopusVisualization() {
             style={{ animationDelay: '1s', animationDuration: '2s' }}
           />
 
-          {/* OctoOps Logo */}
           <text
             x="400"
             y="260"
@@ -243,19 +224,17 @@ export default function OctopusVisualization() {
           </text>
         </g>
 
-        {/* Connection Lines between active agents */}
         {agentConfig.map((agent, i) => {
           if (agentStates[agent.name] !== 'active') return null;
           
           return agentConfig.slice(i + 1).map((otherAgent, j) => {
             if (agentStates[otherAgent.name] !== 'active') return null;
             
-            // Re-calculate positions for lines to match convergent state
             const currentLength = isConverging ? 80 : 180;
             
             const angle1 = (agent.angle * Math.PI) / 180;
             const angle2 = (otherAgent.angle * Math.PI) / 180;
-            const x1 = 400 + Math.cos(angle1) * 70; // Start from brain edge (approx)
+            const x1 = 400 + Math.cos(angle1) * 70; 
             const y1 = 250 + Math.sin(angle1) * 70;
             const x2 = 400 + Math.cos(angle2) * 70;
             const y2 = 250 + Math.sin(angle2) * 70;
