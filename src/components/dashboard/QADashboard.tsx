@@ -81,7 +81,8 @@ export default function QADashboard() {
                               (typeof t.reviewedBy === 'string' && t.reviewedBy === userId);
       
       const assignedToMe = isAssignedToMe(t);
-      return (assignedToMe && t.status !== 'done' && t.status !== 'in-review') || wasReviewedByMe;
+      // FIX: Only show COMPLETED tasks in history
+      return (assignedToMe && t.status === 'done') || wasReviewedByMe;
   });
 
   return (
