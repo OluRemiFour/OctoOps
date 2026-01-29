@@ -312,6 +312,10 @@ export default function MemberDashboard() {
               {/* LIGHTBOX VIEWER */}
               <Dialog open={!!viewingArtifact} onOpenChange={() => setViewingArtifact(null)}>
                 <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none flex items-center justify-center">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Artifact Preview</DialogTitle>
+                        <DialogDescription>Full scale view of the artifact or feedback image</DialogDescription>
+                    </DialogHeader>
                     <img 
                         src={viewingArtifact || ''} 
                         alt="Artifact Preview" 

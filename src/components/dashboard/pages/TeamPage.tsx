@@ -77,8 +77,9 @@ export default function TeamPage() {
 
       // Listen for team updates
       socket.on('team-updated', (data) => {
-        if (data.projectId === project._id) {
+        if (data.projectId?.toString() === project._id?.toString()) {
           fetchTeamData();
+          useAppStore.getState().fetchProject(project._id?.toString()); 
           if (data.newMember) {
             toast({
               title: "Network Expansion",
@@ -89,8 +90,9 @@ export default function TeamPage() {
       });
 
       socket.on('tasks-updated', (data) => {
-        if (data.projectId === project._id) {
+        if (data.projectId?.toString() === project._id?.toString()) {
           useAppStore.getState().fetchTasks(); 
+          useAppStore.getState().fetchProject(project._id?.toString()); 
         }
       });
 
@@ -107,8 +109,9 @@ Nodes: TeamPage
 
   const fetchTeamData = async () => {
     try {
+      if (!project?._id) return;
       setLoading(true);
-      const res = await teamApi.getMembers(project!._id as string);
+      const res = await teamApi.getMembers(project._id as string);
       setMembers(res.data.members || []);
       setPendingInvites(res.data.pendingInvites || []);
     } catch (error) {
@@ -124,9 +127,10 @@ Nodes: TeamPage
   };
 
   const handleRemoveMember = async (memberId: string) => {
+    if (!project?._id) return;
     setRemovingId(memberId);
     try {
-      await teamApi.removeMember(memberId, project!._id as string);
+      await teamApi.removeMember(memberId, project._id as string);
       await fetchTeamData();
       toast({
         title: "Member Removed",
@@ -169,7 +173,14 @@ Nodes: TeamPage
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
       await teamApi.updateRole(userId, newRole);
+      
+      // Explicitly refresh data to ensure immediate UI update
       await fetchTeamData();
+      const pId = project?._id?.toString();
+      if (pId) {
+          await useAppStore.getState().fetchProject(pId);
+      }
+      
       toast({
         title: "Role Updated",
         description: `Successfully reassigned to ${newRole.toUpperCase()}.`,
@@ -348,12 +359,15 @@ Nodes: TeamPage
                       <span className="text-[#00F0FF]">
                         {(() => {
                             const allTasks = tasks;
-                            const memberTasks = allTasks.filter(t => 
-                                t.assignee === member._id || 
-                                t.assigneeName === member.name || 
-                                t.assigneeEmail === member.email ||
-                                (typeof t.assignee === 'object' && (t.assignee as any)?._id === member._id)
-                            );
+                             const memberTasks = tasks.filter(t => {
+                                 const assigneeId = typeof t.assignee === 'string' ? t.assignee : (t.assignee as any)?._id;
+                                 const mId = member._id?.toString();
+                                 return (
+                                     (assigneeId && mId && assigneeId.toString() === mId) ||
+                                     (t.assigneeName === member.name) ||
+                                     (t.assigneeEmail?.toLowerCase() === member.email?.toLowerCase())
+                                 );
+                             });
                             const done = memberTasks.filter(t => t.status === 'done').length;
                             const total = memberTasks.length;
                             
@@ -365,19 +379,21 @@ Nodes: TeamPage
                         })()}
                       </span>
                    </div>
-                   <div className="space-y-1">
-                      {(() => {
-                          const allTasks = tasks;
-                          const memberTasks = allTasks.filter(t => 
-                            t.assignee === member._id || 
-                            t.assigneeName === member.name || 
-                            t.assigneeEmail === member.email ||
-                            (typeof t.assignee === 'object' && (t.assignee as any)?._id === member._id)
-                          );
-                          
-                          const list = isQA 
-                            ? [...allTasks.filter(t => t.status === 'in-review'), ...memberTasks]
-                            : memberTasks;
+                    <div className="space-y-1">
+                       {(() => {
+                           const memberTasks = tasks.filter(t => {
+                               const assigneeId = typeof t.assignee === 'string' ? t.assignee : (t.assignee as any)?._id;
+                               const mId = member._id?.toString();
+                               return (
+                                   (assigneeId && mId && assigneeId.toString() === mId) ||
+                                   (t.assigneeName === member.name) ||
+                                   (t.assigneeEmail?.toLowerCase() === member.email?.toLowerCase())
+                               );
+                           });
+                           
+                           const list = isQA 
+                             ? [...tasks.filter(t => t.status === 'in-review'), ...memberTasks]
+                             : memberTasks;
 
                           return list.slice(0, 2).map(task => (
                              <div key={task._id || task.id} className="text-[10px] py-1 px-2 rounded bg-white/5 border border-white/10 text-[#E8F0FF] truncate">
@@ -389,7 +405,7 @@ Nodes: TeamPage
                 </div>
 
                   <div className="flex flex-col gap-2">
-                    <span className={`text-xs px-3 py-1 rounded-full border font-bold ${roleBadge.bg} ${roleBadge.text} ${roleBadge.border} ${roleBadge.glow} flex items-center gap-1 w-fit transition-all duration-500`}>
+                    <span className={`text-xs px-3 py-1 mt-4 rounded-full border font-bold ${roleBadge.bg} ${roleBadge.text} ${roleBadge.border} ${roleBadge.glow} flex items-center gap-1 w-fit transition-all duration-500`}>
                         <RoleIcon className="w-3 h-3" />
                         {(member.title || member.role || member.email.split('@')[0]).toUpperCase()}
                     </span>

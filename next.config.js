@@ -9,6 +9,16 @@ const nextConfig = {
         hostname: 'octo-ops.vercel.app',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'octo-ops-backend.onrender.com',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        pathname: '/uploads/**',
+      },
     ],
   },
 };
